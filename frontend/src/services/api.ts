@@ -1,0 +1,79 @@
+import axios from "axios";
+import { Defect, MaintenanceBlock, WeatherReport, AIParsedDefectResponse } from "@/types/railway";
+
+const API_BASE_URL = "http://localhost:8000/api/v1";
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export const RailwayAPI = {
+  // Defects
+  async getDefects(params?: { system?: string; department?: string; severity?: string; status?: string }): Promise<Defect[]> {
+    const res = await api.get("/defects", { params });
+    return res.data;
+  },
+
+  async parseDefectWithAI(rawText: string, autoCreate: boolean = false): Promise<AIParsedDefectResponse> {
+    const res = await api.post("/defects/ai-parse", {
+      raw_text: rawText,
+      track_section_id: "NCR-GZB-TDL-UP",
+      auto_create: autoCreate,
+      reported_by: "DISPATCHER_VOICE_CONSOLE"
+    });
+    return res.data;
+  },
+
+  // Maintenance Blocks
+  async getBlocks(status?: string): Promise<MaintenanceBlock[]> {
+    const res = await api.get("/blocks", { params: { status } });
+    return res.data;
+  },
+
+  async approveBlock(blockId: string, privateNumber: string, remarks?: string): Promise<MaintenanceBlock> {
+    const res = await api.post(`/blocks/${blockId}/approve`, {
+      private_number: privateNumber,
+      controller_remarks: remarks || "Granted via Control Room Console",
+      caution_order_issued: true,
+      ohe_power_isolated: true,
+    });
+    return res.data;
+  },
+
+  async updateProtocolStep(blockId: string, step: number, status?: string): Promise<MaintenanceBlock> {
+    const res = await api.post(`/blocks/${blockId}/protocol`, {
+      protocol_step: step,
+      status: status,
+    });
+    return res.data;
+  },
+
+  async runBlockOptimization(trackSectionId = "NCR-GZB-TDL-UP", line = "UP", saveToDb = false): Promise<MaintenanceBlock[]> {
+    const res = await api.post("/blocks/optimize/generate", null, {
+      params: { track_section_id: trackSectionId, line, save_to_db: saveToDb },
+    });
+    return res.data;
+  },
+
+  // Live Telemetry & Weather
+  async getLiveTelemetry() {
+    const res = await api.get("/live/telemetry");
+    return res.data;
+  },
+
+  async getLiveWeather(): Promise<WeatherReport> {
+    const res = await api.get("/live/weather");
+    return res.data;
+  },
+
+  // Timetable
+  async getTimetableGaps(sectionId = "NCR-GZB-TDL-UP", line = "UP") {
+    const res = await api.get("/timetable/gaps", {
+      params: { track_section_id: sectionId, line, min_gap_minutes: 60 }
+    });
+    return res.data;
+  }
+};

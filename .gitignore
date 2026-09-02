@@ -1,0 +1,108 @@
+# ==============================================================================
+# Samanvay-AI (SIH Problem ID: 26027) Root .gitignore
+# ==============================================================================
+
+# 1. Confidential & Sensitive Secrets (CRITICAL)
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+google-services.json
+**/google-services.json
+local.properties
+**/local.properties
+secrets.properties
+**/secrets.properties
+
+# 2. Local Databases & Storage
+*.db
+*.sqlite
+*.sqlite3
+backend/samanvay.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 3. Python Virtual Environments & Caches
+venv/
+.venv/
+env/
+backend/venv/
+backend/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.mypy_cache/
+
+# 4. Node.js & Frontend Build Outputs
+node_modules/
+**/node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+build/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 5. Android & Gradle Build Artifacts
+.gradle/
+**/.gradle/
+build/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+SIH-PROTOTYPE-Mobile/.gradle/
+SIH-PROTOTYPE-Mobile/build/
+SIH-PROTOTYPE-Mobile/app/build/
+*.apk
+*.aab
+
+# 6. IDEs & Editor Configuration
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# 7. Operating System Artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# 8. Isolated Reference Templates (Do NOT commit to core project)
+free-react-tailwind-admin-dashboard/
+shadcn-admin/
+
+# 9. Logs & Runtime Dumps
+*.log
+logs/
+**/logs/
