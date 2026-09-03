@@ -214,8 +214,10 @@ def run_block_optimization(
         max_blocks=5
     )
 
+    planned_list = solution.get("planned_blocks", []) if isinstance(solution, dict) else solution
+
     created_blocks = []
-    for plan in solution:
+    for plan in planned_list:
         block_id = f"BLK-OPT-{uuid.uuid4().hex[:6].upper()}"
         db_block = MaintenanceBlock(
             id=block_id,
@@ -239,7 +241,7 @@ def run_block_optimization(
 
         if save_to_db:
             db.add(db_block)
-            for d in plan["defects"]:
+            for d in plan.get("defects", []):
                 assoc = BlockDefectAssociation(block_id=block_id, defect_id=d.id)
                 db.add(assoc)
             db.commit()
@@ -248,3 +250,72 @@ def run_block_optimization(
         created_blocks.append(db_block)
 
     return [map_block_out(b) for b in created_blocks]
+
+@router.post("/optimize/bundle")
+def run_block_optimization_with_metrics(
+    track_section_id: str = "NCR-GZB-TDL-UP",
+    line: str = "UP",
+    target_date: Optional[datetime.date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the OR-Tools bundled maintenance block schedule alongside quantified
+    asset availability metrics and downtime reduction percentages.
+    """
+    if not target_date:
+        target_date = datetime.date.today()
+
+    defects = db.query(Defect).filter(
+        Defect.track_section_id == track_section_id,
+        Defect.line == line,
+        Defect.status.in_([DefectStatus.OPEN, DefectStatus.SCHEDULED])
+    ).all()
+
+    trains = db.query(TrainSchedule).filter(
+        TrainSchedule.track_section_id == track_section_id,
+        TrainSchedule.line == line
+    ).all()
+
+    optimizer = BlockOptimizer(section_id=track_section_id, line=line)
+    solution = optimizer.solve_optimal_block_plan(
+        candidate_defects=defects,
+        train_schedules=trains,
+        target_date=target_date,
+        max_blocks=5
+    )
+
+    planned_list = solution.get("planned_blocks", []) if isinstance(solution, dict) else solution
+    metrics = solution.get("metrics", {}) if isinstance(solution, dict) else {}
+
+    # Format blocks
+    out_blocks = []
+    for plan in planned_list:
+        block_id = f"BLK-OPT-{uuid.uuid4().hex[:6].upper()}"
+        out_blocks.append({
+            "id": block_id,
+            "block_code": plan["block_code"],
+            "title": plan["title"],
+            "track_section_id": plan["track_section_id"],
+            "line": plan["line"],
+            "division": "Prayagraj (NCR)",
+            "start_km": plan["start_km"],
+            "end_km": plan["end_km"],
+            "time_window_start": plan["time_window_start"].isoformat() if hasattr(plan["time_window_start"], "isoformat") else str(plan["time_window_start"]),
+            "time_window_end": plan["time_window_end"].isoformat() if hasattr(plan["time_window_end"], "isoformat") else str(plan["time_window_end"]),
+            "duration_minutes": plan["duration_minutes"],
+            "primary_department": plan["primary_department"],
+            "bundled_departments": plan["bundled_departments"],
+            "machinery_assigned": plan["machinery_assigned"],
+            "status": "PENDING",
+            "optimization_score": plan["optimization_score"],
+            "preceding_train": plan["preceding_train"],
+            "following_train": plan["following_train"],
+            "is_joint_bundle": plan.get("is_joint_bundle", True),
+            "predicted_duration_mins": plan.get("predicted_duration_mins", plan["duration_minutes"]),
+        })
+
+    return {
+        "blocks": out_blocks,
+        "metrics": metrics
+    }
+

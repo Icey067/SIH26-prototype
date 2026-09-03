@@ -9,12 +9,15 @@ interface CorridorRadarProps {
 }
 
 const STATIONS = [
-  { code: "GZB", name: "Ghaziabad", km: 15.0 },
-  { code: "KRJ", name: "Khurja Jn", km: 50.0 },
-  { code: "ALJN", name: "Aligarh Jn", km: 86.0 },
-  { code: "HRS", name: "Hathras Jn", km: 125.0 },
-  { code: "TDL", name: "Tundla Jn", km: 205.0 },
-  { code: "ETW", name: "Etawah Jn", km: 300.0 },
+  { code: "GZB", name: "Ghaziabad", km: 0.0 },
+  { code: "DER", name: "Dadri", km: 37.0 },
+  { code: "ALJN", name: "Aligarh Jn", km: 126.0 },
+  { code: "HRS", name: "Hathras Jn", km: 156.0 },
+  { code: "TDL", name: "Tundla Jn", km: 204.0 },
+  { code: "SKB", name: "Shikohabad", km: 240.0 },
+  { code: "ETW", name: "Etawah Jn", km: 296.0 },
+  { code: "PHD", name: "Phaphund", km: 352.0 },
+  { code: "RURA", name: "Rura", km: 394.0 },
   { code: "CNB", name: "Kanpur Central", km: 440.0 },
 ];
 

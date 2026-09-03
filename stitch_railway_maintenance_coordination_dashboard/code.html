@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {"darkMode":"class","theme":{"extend":{"colors":{"surface-dim":"#0f131d","surface-container-low":"#171b26","on-primary-fixed-variant":"#004e5c","error":"#ffb4ab","background":"#0f131d","surface":"#0f131d","secondary-fixed-dim":"#ffb95f","surface-container-highest":"#313540","on-tertiary-fixed-variant":"#005236","secondary-container":"#ee9800","inverse-on-surface":"#2c303b","on-primary-container":"#00424f","on-primary-fixed":"#001f26","outline-variant":"#3d494c","tertiary":"#4edea3","primary-fixed":"#acedff","on-background":"#dfe2f1","error-container":"#93000a","tertiary-fixed":"#6ffbbe","secondary":"#ffb95f","inverse-surface":"#dfe2f1","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","on-primary":"#003640","on-surface":"#dfe2f1","on-surface-variant":"#bcc9cd","inverse-primary":"#00687a","primary-fixed-dim":"#4cd7f6","surface-bright":"#353944","on-error":"#690005","surface-container":"#1c1f2a","on-secondary-fixed-variant":"#653e00","surface-variant":"#313540","tertiary-container":"#1bbd85","on-tertiary-container":"#00452e","surface-tint":"#4cd7f6","on-tertiary-fixed":"#002113","primary":"#4cd7f6","on-secondary":"#472a00","tertiary-fixed-dim":"#4edea3","secondary-fixed":"#ffddb8","outline":"#869397","surface-container-high":"#262a35","on-secondary-fixed":"#2a1700","on-error-container":"#ffdad6","on-tertiary":"#003824","on-secondary-container":"#5b3800"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"panel-padding-md":"0.75rem","gutter-xl":"1.5rem","panel-padding-sm":"0.5rem","edge-margin-desktop":"1.5rem","gutter-xs":"0.25rem","gutter-lg":"1rem","panel-padding-lg":"1.25rem","gutter-md":"0.75rem","edge-margin-mobile":"0.75rem","gutter-sm":"0.5rem"},"fontFamily":{"headline-lg-mobile":["Inter"],"body-md":["Inter"],"telemetry-sm":["JetBrains Mono"],"body-lg":["Inter"],"headline-md":["Inter"],"headline-sm":["Inter"],"telemetry-md":["JetBrains Mono"],"headline-xl-mobile":["Inter"],"telemetry-lg":["JetBrains Mono"],"label-caps":["JetBrains Mono"],"body-sm":["Inter"],"headline-xl":["Inter"],"headline-lg":["Inter"]},"fontSize":{"headline-lg-mobile":["20px",{"lineHeight":"26px","letterSpacing":"0em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","letterSpacing":"0em","fontWeight":"400"}],"telemetry-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.02em","fontWeight":"500"}],"body-lg":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"400"}],"headline-md":["18px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"headline-sm":["15px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"telemetry-md":["13px",{"lineHeight":"18px","letterSpacing":"-0.01em","fontWeight":"500"}],"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"700"}],"telemetry-lg":["18px",{"lineHeight":"24px","letterSpacing":"-0.02em","fontWeight":"600"}],"label-caps":["10px",{"lineHeight":"12px","letterSpacing":"0.08em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased select-none"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low/95 backdrop-blur-xl z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="flex flex-col"><div class="h-16 px-edge-margin-desktop flex items-center gap-gutter-sm bg-surface-container-lowest/80"><div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary shadow-[0_0_12px_rgba(6,182,212,0.35)]"><span class="material-symbols-outlined text-[20px]">hub</span></div><div class="flex flex-col leading-none"><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface font-bold uppercase">Samanvay<span class="text-primary">-AI</span></span><span class="font-label-caps text-label-caps text-on-surface-variant">NCR PRYJ DIV</span></div></div><div class="px-panel-padding-sm pt-panel-padding-md"><div class="px-panel-padding-sm pb-gutter-xs text-on-surface-variant font-label-caps text-label-caps uppercase">Operational Controls</div><nav class="flex flex-col gap-gutter-xs" data-active-classes="bg-primary-container text-on-primary font-semibold"><a aria-current="page" class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded transition-colors bg-primary-container text-on-primary font-semibold" data-path="overview-telemetry" href="#"><span class="material-symbols-outlined text-[18px]">speed</span><span class="font-body-sm text-body-sm">Corridor Telemetry</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="block-planner" href="#"><span class="material-symbols-outlined text-[18px]">calendar_view_week</span><span class="font-body-sm text-body-sm">Block Slot Planner</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="interlocking-matrix" href="#"><span class="material-symbols-outlined text-[18px]">alt_route</span><span class="font-body-sm text-body-sm">Route &amp; Interlock</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="catenary-power" href="#"><span class="material-symbols-outlined text-[18px]">bolt</span><span class="font-body-sm text-body-sm">OHE / Traction Power</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="incident-log" href="#"><span class="material-symbols-outlined text-[18px]">warning</span><span class="font-body-sm text-body-sm">Safety Cutoff &amp; Log</span></a></nav></div><div class="px-panel-padding-sm pt-panel-padding-lg"><div class="px-panel-padding-sm pb-gutter-xs text-on-surface-variant font-label-caps text-label-caps uppercase">Division Infrastructure</div><nav class="flex flex-col gap-gutter-xs" data-active-classes="bg-primary-container text-on-primary font-semibold"><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="substation-health" href="#"><span class="material-symbols-outlined text-[18px]">electric_meter</span><span class="font-body-sm text-body-sm">Traction Substations</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="rolling-stock-feed" href="#"><span class="material-symbols-outlined text-[18px]">train</span><span class="font-body-sm text-body-sm">Freight / Express Link</span></a><a class="flex items-center gap-gutter-sm px-panel-padding-sm py-gutter-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="audit-reports" href="#"><span class="material-symbols-outlined text-[18px]">receipt_long</span><span class="font-body-sm text-body-sm">Shift Handover Logs</span></a></nav></div></div><div class="p-panel-padding-md bg-surface-container-lowest/90"><div class="p-panel-padding-sm rounded bg-surface-container flex flex-col gap-gutter-xs"><div class="flex items-center justify-between"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Core Health</span><span class="font-telemetry-sm text-telemetry-sm text-tertiary">99.98%</span></div><div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden"><div class="bg-tertiary h-full w-[99.98%]"></div></div><div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant pt-gutter-xs"><span>RTT 4.2ms</span><span>PRYJ LINK UP</span></div></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-low/90 backdrop-blur-xl z-40 shadow-[0_1px_8px_rgba(0,0,0,0.3)]"><div class="h-16 w-full px-edge-margin-desktop flex items-center justify-between gap-gutter-md"><div class="flex items-center gap-gutter-md"><div class="flex items-center gap-gutter-xs px-panel-padding-sm py-gutter-xs rounded bg-surface-container-high shadow-[0_0_12px_rgba(6,182,212,0.15)]"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><div class="flex flex-col"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Sector Track</span><span class="font-telemetry-sm text-telemetry-sm text-primary font-bold">GZB-CNB 440KM ACTIVE</span></div></div><div class="flex items-center gap-gutter-xs px-panel-padding-sm py-gutter-xs rounded bg-surface-container-high"><span class="w-2 h-2 rounded-full bg-tertiary"></span><div class="flex flex-col"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Headway</span><span class="font-telemetry-sm text-telemetry-sm text-tertiary font-bold">NOMINAL (140s)</span></div></div><div class="flex items-center gap-gutter-xs px-panel-padding-sm py-gutter-xs rounded bg-surface-container-high shadow-[0_0_12px_rgba(245,158,11,0.2)]"><span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span><div class="flex flex-col"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Active Blocks</span><span class="font-telemetry-sm text-telemetry-sm text-secondary font-bold">03 GRANTED</span></div></div></div><div class="flex items-center gap-gutter-md"><div class="flex items-center gap-gutter-md px-panel-padding-sm py-gutter-xs bg-surface-container-lowest rounded"><div class="flex flex-col items-end"><span class="font-label-caps text-label-caps text-on-surface-variant">UTC SYNCHRONIZED</span><span class="font-telemetry-md text-telemetry-md text-on-surface font-semibold">11:42:19 Z</span></div><div class="h-6 w-px bg-surface-variant"></div><div class="flex flex-col items-end"><span class="font-label-caps text-label-caps text-primary">IST RAILWAY REF</span><span class="font-telemetry-md text-telemetry-md text-primary font-bold">17:12:19 IST</span></div></div><button class="flex items-center gap-gutter-xs px-panel-padding-sm py-gutter-xs rounded bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px] text-secondary">notifications_active</span><span class="font-telemetry-sm text-telemetry-sm text-secondary font-bold">2 ALERTS</span></button><div class="flex items-center gap-gutter-sm pl-gutter-xs"><div class="flex flex-col items-end leading-tight"><span class="font-body-sm text-body-sm font-semibold text-on-surface">R. K. Sharma</span><span class="font-label-caps text-label-caps text-on-surface-variant">CHIEF SEC CONTROLLER</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.35)]"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></div></header><main class="relative pt-16 bg-surface min-h-screen w-full px-edge-margin-desktop py-panel-padding-lg"><div class="flex flex-col w-full gap-gutter-md">
+<!-- Top Division Operational Ribbon -->
+<div class="flex items-center justify-between px-panel-padding-md py-gutter-xs rounded bg-surface-container-lowest text-on-surface">
+<div class="flex items-center gap-gutter-lg flex-wrap">
+<div class="flex items-center gap-gutter-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">SYSTEM:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary font-bold">SAMANVAY-AI v4.19</span>
+<span class="px-gutter-xs py-0.5 rounded bg-surface-container-high text-tertiary font-label-caps text-label-caps font-semibold">COA-LIVE LINKED</span>
+</div>
+<div class="h-3 w-px bg-surface-container-highest"></div>
+<div class="flex items-center gap-gutter-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">DIVISION:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-semibold">NCR / PRAYAGRAJ (PRYJ)</span>
+</div>
+<div class="h-3 w-px bg-surface-container-highest"></div>
+<div class="flex items-center gap-gutter-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">CORRIDOR SECTOR:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-secondary font-bold">GHAZIABAD (0KM) — KANPUR CTRL (440KM)</span>
+</div>
+<div class="h-3 w-px bg-surface-container-highest"></div>
+<div class="flex items-center gap-gutter-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">CATENARY STATUS:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-tertiary font-semibold">25kV AC ENERGIZED (99.4%)</span>
+</div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="inline-flex items-center gap-1 font-label-caps text-label-caps px-panel-padding-sm py-0.5 rounded bg-primary-container text-on-primary font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary animate-pulse"></span> AUTO-DISPATCH ACTIVE
+      </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">SYNC: 140ms</span>
+</div>
+</div>
+<!-- SECTION 1: High-Density Schematic Corridor Strip (Track Map) -->
+<section class="rounded bg-surface-container-low p-panel-padding-md shadow-md">
+<div class="flex items-center justify-between pb-gutter-sm">
+<div class="flex items-center gap-gutter-sm">
+<div class="w-2 h-4 bg-primary rounded"></div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase">
+          Dynamic Linear Synoptic Diagram • Mainline Quad-Track Telemetry
+        </h2>
+</div>
+<div class="flex items-center gap-gutter-md">
+<div class="flex items-center gap-gutter-xs font-telemetry-sm text-telemetry-sm text-on-surface-variant">
+<span class="w-2.5 h-2.5 rounded bg-primary"></span> UP Fast
+          <span class="w-2.5 h-2.5 rounded bg-surface-container-highest ml-2"></span> DN Fast
+          <span class="w-2.5 h-2.5 rounded bg-secondary ml-2"></span> Block Possession
+          <span class="w-2.5 h-2.5 rounded bg-error ml-2"></span> Conflict Lock
+        </div>
+<button class="font-label-caps text-label-caps text-primary px-panel-padding-sm py-1 rounded bg-surface-container-high hover:bg-surface-bright transition-colors uppercase font-bold">
+          Full Synoptic View
+        </button>
+</div>
+</div>
+<!-- Live Track Graphical Representation -->
+<div class="w-full bg-surface-container-lowest rounded p-panel-padding-md overflow-x-auto">
+<div class="min-w-[960px] flex flex-col gap-gutter-sm">
+<!-- Stations Kilometer Axis -->
+<div class="grid grid-cols-5 text-on-surface-variant font-label-caps text-label-caps uppercase text-center border-none">
+<div class="text-left flex flex-col">
+<span class="font-telemetry-md text-telemetry-md text-primary font-bold">GZB (0.0k)</span>
+<span class="text-on-surface-variant text-[9px]">GHAZIABAD JN</span>
+</div>
+<div class="text-center flex flex-col">
+<span class="font-telemetry-md text-telemetry-md text-on-surface font-bold">ALJN (106.4k)</span>
+<span class="text-on-surface-variant text-[9px]">ALIGARH JN</span>
+</div>
+<div class="text-center flex flex-col">
+<span class="font-telemetry-md text-telemetry-md text-on-surface font-bold">TDL (205.8k)</span>
+<span class="text-on-surface-variant text-[9px]">TUNDLA JN</span>
+</div>
+<div class="text-center flex flex-col">
+<span class="font-telemetry-md text-telemetry-md text-on-surface font-bold">ETW (297.2k)</span>
+<span class="text-on-surface-variant text-[9px]">ETAWAH JN</span>
+</div>
+<div class="text-right flex flex-col">
+<span class="font-telemetry-md text-telemetry-md text-primary font-bold">CNB (440.1k)</span>
+<span class="text-on-surface-variant text-[9px]">KANPUR CENTRAL</span>
+</div>
+</div>
+<!-- Track Canvas (SVG Interlocking Strip) -->
+<div class="relative w-full h-24 bg-surface-container-low rounded flex items-center px-4 overflow-hidden">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 90">
+<defs>
+<pattern height="8" id="hatch-amber" patterntransform="rotate(45 0 0)" patternunits="userSpaceOnUse" width="8">
+<line opacity="0.6" stroke="#ee9800" stroke-width="2.5" x1="0" x2="0" y1="0" y2="8"></line>
+</pattern>
+<lineargradient id="grad-cyan-glow" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#4cd7f6" stop-opacity="0.2"></stop>
+<stop offset="50%" stop-color="#4cd7f6" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#4cd7f6" stop-opacity="0.2"></stop>
+</lineargradient>
+</defs>
+<!-- Major Station Hub Reference Vertical Markers -->
+<line stroke="#313540" stroke-dasharray="3 3" stroke-width="1.5" x1="10" x2="10" y1="5" y2="85"></line>
+<line stroke="#313540" stroke-dasharray="3 3" stroke-width="1.5" x1="240" x2="240" y1="5" y2="85"></line>
+<line stroke="#313540" stroke-dasharray="3 3" stroke-width="1.5" x1="470" x2="470" y1="5" y2="85"></line>
+<line stroke="#313540" stroke-dasharray="3 3" stroke-width="1.5" x1="680" x2="680" y1="5" y2="85"></line>
+<line stroke="#313540" stroke-dasharray="3 3" stroke-width="1.5" x1="990" x2="990" y1="5" y2="85"></line>
+<!-- UP Line 1 (Track Main Fast) -->
+<line stroke="#262a35" stroke-width="4" x1="0" x2="1000" y1="26" y2="26"></line>
+<line stroke="#4cd7f6" stroke-opacity="0.7" stroke-width="1.5" x1="0" x2="1000" y1="26" y2="26"></line>
+<!-- DN Line 2 (Track Main Fast) -->
+<line stroke="#262a35" stroke-width="4" x1="0" x2="1000" y1="46" y2="46"></line>
+<line stroke="#869397" stroke-opacity="0.4" stroke-width="1.2" x1="0" x2="1000" y1="46" y2="46"></line>
+<!-- 3rd Goods / Loop Line -->
+<line stroke="#262a35" stroke-width="3" x1="0" x2="1000" y1="66" y2="66"></line>
+<line stroke="#3d494c" stroke-dasharray="4 2" stroke-width="1" x1="200" x2="520" y1="66" y2="66"></line>
+<!-- Active Catenary/TMS Maintenance Block (Aligarh - Hathras km 112-145) -->
+<rect fill="url(#hatch-amber)" height="20" rx="2" width="95" x="255" y="16"></rect>
+<rect fill="#ee9800" fill-opacity="0.1" height="20" rx="2" stroke="#ee9800" stroke-width="1.5" width="95" x="255" y="16"></rect>
+<!-- Turnouts / Points Interlocking Connectors -->
+<path d="M 230 46 L 245 26" stroke="#4cd7f6" stroke-width="1.5"></path>
+<path d="M 455 26 L 470 66" stroke="#ee9800" stroke-width="1.5"></path>
+<path d="M 670 66 L 685 46" stroke="#869397" stroke-width="1.5"></path>
+<!-- Live Train Marker: 12424 Rajdhani Express (UP Main km 184) -->
+<g transform="translate(420, 18)">
+<circle class="animate-ping" cx="8" cy="8" fill="#ffb4ab" fill-opacity="0.2" r="8"></circle>
+<rect fill="#ffb4ab" height="16" rx="2" stroke="#93000a" stroke-width="1.5" width="16" x="0" y="0"></rect>
+<text fill="#690005" font-family="JetBrains Mono" font-size="9" font-weight="700" text-anchor="middle" x="8" y="12">R</text>
+</g>
+<!-- Live Train Marker: 12004 Shatabdi Express (DN Main km 94) -->
+<g transform="translate(210, 38)">
+<rect fill="#4edea3" height="16" rx="2" stroke="#003824" stroke-width="1.5" width="16" x="0" y="0"></rect>
+<text fill="#002113" font-family="JetBrains Mono" font-size="9" font-weight="700" text-anchor="middle" x="8" y="12">S</text>
+</g>
+<!-- Freight Train: BCNHL-BOXN Freight on Loop-2 (km 330) -->
+<g transform="translate(750, 58)">
+<rect fill="#313540" height="16" rx="2" stroke="#869397" stroke-width="1" width="28" x="0" y="0"></rect>
+<text fill="#dfe2f1" font-family="JetBrains Mono" font-size="8" font-weight="500" text-anchor="middle" x="14" y="12">BOXN</text>
+</g>
+<!-- Vande Bharat 22436 Marker (km 280) -->
+<g transform="translate(635, 18)">
+<rect fill="#4cd7f6" height="16" rx="2" stroke="#003640" stroke-width="1.5" width="16" x="0" y="0"></rect>
+<text fill="#001f26" font-family="JetBrains Mono" font-size="9" font-weight="700" text-anchor="middle" x="8" y="12">VB</text>
+</g>
+</svg>
+<!-- Floating Badges Layer inside schematic -->
+<div class="absolute left-[26%] top-2 pointer-events-none">
+<span class="px-gutter-xs py-0.5 rounded bg-secondary text-on-secondary font-label-caps text-label-caps font-bold shadow-sm">
+              BLOCK A-14 • TSR 30 KM/H
+            </span>
+</div>
+<div class="absolute left-[41.5%] bottom-2">
+<span class="px-gutter-xs py-0.5 rounded bg-error-container text-on-error-container font-telemetry-sm text-telemetry-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[12px] text-error">error</span> 12424 RAJDHANI (+14m)
+            </span>
+</div>
+<div class="absolute left-[63%] top-2">
+<span class="px-gutter-xs py-0.5 rounded bg-surface-container-high text-primary font-telemetry-sm text-telemetry-sm font-bold shadow-sm">
+              22436 VB • 130 KM/H
+            </span>
+</div>
+</div>
+<!-- Telemetry Status Badges Bar -->
+<div class="grid grid-cols-4 gap-gutter-sm pt-gutter-xs">
+<div class="flex items-center justify-between p-panel-padding-sm rounded bg-surface-container">
+<span class="font-label-caps text-label-caps text-on-surface-variant">ACTIVE TSR ORDERS:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-secondary font-bold">04 SECTORS</span>
+</div>
+<div class="flex items-center justify-between p-panel-padding-sm rounded bg-surface-container">
+<span class="font-label-caps text-label-caps text-on-surface-variant">CORRIDOR OCCUPANCY:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-tertiary font-bold">78.4% NOMINAL</span>
+</div>
+<div class="flex items-center justify-between p-panel-padding-sm rounded bg-surface-container">
+<span class="font-label-caps text-label-caps text-on-surface-variant">PUNCTUALITY INDEX (PRYJ):</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary font-bold">94.8% MTD</span>
+</div>
+<div class="flex items-center justify-between p-panel-padding-sm rounded bg-surface-container">
+<span class="font-label-caps text-label-caps text-on-surface-variant">BLOCK GRANTED TODAY:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-bold">18h 40m TOTAL</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: Primary Feature — 2D Railway Time-Distance String Chart (Marey Graph) -->
+<section class="rounded bg-surface-container-low p-panel-padding-md shadow-md flex flex-col gap-gutter-sm">
+<div class="flex items-center justify-between flex-wrap gap-gutter-sm">
+<div class="flex items-center gap-gutter-md">
+<div class="flex items-center gap-gutter-xs">
+<div class="w-2 h-4 bg-primary rounded"></div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase">
+            Trajectory String Chart • Marey Distance-Time Dynamic Matrix
+          </h2>
+</div>
+<span class="px-gutter-sm py-0.5 rounded bg-surface-container-highest font-label-caps text-label-caps text-primary uppercase font-bold">
+          PRYJ DIVISION CONTROL ROOM 1
+        </span>
+</div>
+<!-- Chart View Controls -->
+<div class="flex items-center gap-gutter-xs flex-wrap">
+<div class="flex rounded bg-surface-container-lowest p-0.5">
+<button class="px-gutter-sm py-1 rounded bg-primary text-on-primary font-label-caps text-label-caps font-bold">
+            UP LINE
+          </button>
+<button class="px-gutter-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-caps text-label-caps font-bold">
+            DN LINE
+          </button>
+<button class="px-gutter-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-caps text-label-caps font-bold">
+            QUAD 3/4
+          </button>
+</div>
+<div class="h-4 w-px bg-surface-container-highest"></div>
+<button class="flex items-center gap-gutter-xs px-gutter-sm py-1 rounded bg-error-container text-on-error-container font-label-caps text-label-caps font-bold transition-all shadow-[0_0_12px_rgba(239,68,68,0.25)]" id="toggle-conflicts-btn">
+<span class="material-symbols-outlined text-[14px]">warning</span> HIGHLIGHT CONFLICTS (2)
+        </button>
+<button class="flex items-center gap-gutter-xs px-gutter-sm py-1 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-label-caps text-label-caps font-bold transition-colors">
+<span class="material-symbols-outlined text-[14px] text-primary">science</span> SIMULATE SHIFT
+        </button>
+<button class="flex items-center gap-gutter-xs px-panel-padding-sm py-1 rounded bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-caps text-label-caps font-bold">
+<span class="material-symbols-outlined text-[14px]">zoom_in</span> 100%
+        </button>
+</div>
+</div>
+<!-- Main Marey Graph Canvas Frame -->
+<div class="relative w-full rounded bg-surface-container-lowest overflow-hidden">
+<!-- Top Time Slot Header -->
+<div class="grid grid-cols-7 pl-28 pr-4 py-gutter-xs bg-surface-container text-on-surface-variant font-telemetry-sm text-telemetry-sm border-none">
+<div>00:00</div>
+<div>02:00</div>
+<div>04:00</div>
+<div>06:00</div>
+<div>08:00</div>
+<div>10:00</div>
+<div class="text-right">12:00</div>
+</div>
+<div class="relative flex w-full h-[380px]">
+<!-- Y-Axis Stations Labels Rail -->
+<div class="w-28 flex flex-col justify-between py-2 px-gutter-sm bg-surface-container-low font-telemetry-sm text-telemetry-sm text-on-surface-variant select-none">
+<div class="flex flex-col">
+<span class="text-primary font-bold">GZB (0km)</span>
+<span class="font-label-caps text-[9px] text-outline">GHAZIABAD</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">ALJN (106km)</span>
+<span class="font-label-caps text-[9px] text-outline">ALIGARH JN</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">TDL (205km)</span>
+<span class="font-label-caps text-[9px] text-outline">TUNDLA JN</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">ETW (297km)</span>
+<span class="font-label-caps text-[9px] text-outline">ETAWAH JN</span>
+</div>
+<div class="flex flex-col">
+<span class="text-primary font-bold">CNB (440km)</span>
+<span class="font-label-caps text-[9px] text-outline">KANPUR CTRL</span>
+</div>
+</div>
+<!-- Interactive SVG Chart Plane -->
+<div class="relative flex-1 h-full bg-surface-container-lowest">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 800 380">
+<defs>
+<pattern height="76" id="marey-grid" patternunits="userSpaceOnUse" width="133.33">
+<rect fill="none" height="76" width="133.33"></rect>
+<path d="M 133.33 0 L 0 0 0 76" fill="none" stroke="#1c1f2a" stroke-width="1"></path>
+</pattern>
+<!-- Shading pattern for Bundled Maintenance Block -->
+<pattern height="12" id="possession-stripe" patterntransform="rotate(45 0 0)" patternunits="userSpaceOnUse" width="12">
+<line opacity="0.45" stroke="#ee9800" stroke-width="3" x1="0" x2="0" y1="0" y2="12"></line>
+</pattern>
+<!-- Pulsing Gradient for Conflict Intersection -->
+<radialgradient cx="50%" cy="50%" id="conflict-glow" r="50%">
+<stop offset="0%" stop-color="#ffb4ab" stop-opacity="0.9"></stop>
+<stop offset="60%" stop-color="#93000a" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffb4ab" stop-opacity="0"></stop>
+</radialgradient>
+</defs>
+<!-- Background Grid Layer -->
+<rect fill="url(#marey-grid)" height="380" width="800"></rect>
+<!-- Horizontal Major Station Rails -->
+<line stroke="#262a35" stroke-width="1" x1="0" x2="800" y1="10" y2="10"></line>
+<line stroke="#262a35" stroke-width="1" x1="0" x2="800" y1="95" y2="95"></line>
+<line stroke="#262a35" stroke-width="1" x1="0" x2="800" y1="185" y2="185"></line>
+<line stroke="#262a35" stroke-width="1" x1="0" x2="800" y1="270" y2="270"></line>
+<line stroke="#262a35" stroke-width="1" x1="0" x2="800" y1="370" y2="370"></line>
+<!-- BUNDLED POSSESSION BLOCK: Block A-14 (ALJN-TDL km 112-140, Time 02:30 to 05:00) -->
+<g id="block-a14">
+<!-- X: 2h30m = 166px to 5h00m = 333px. Y: km 112 = 100px to km 140 = 125px -->
+<rect fill="url(#possession-stripe)" height="35" rx="2" width="167" x="166" y="98"></rect>
+<rect fill="#ee9800" fill-opacity="0.12" height="35" rx="2" stroke="#ee9800" stroke-width="1.5" width="167" x="166" y="98"></rect>
+<text fill="#ffddb8" font-family="JetBrains Mono" font-size="9" font-weight="700" x="172" y="112">
+                BLOCK A-14: TMS+TDMS BUNDLED
+              </text>
+<text fill="#ee9800" font-family="JetBrains Mono" font-size="8" x="172" y="125">
+                02:30 - 05:00 | BCM DEEP SCREEN + OHE
+              </text>
+</g>
+<!-- BUNDLED POSSESSION BLOCK 2: Block B-09 (TDL Outer km 205-218, Time 07:30 to 09:45) -->
+<g id="block-b09">
+<rect fill="url(#possession-stripe)" height="30" rx="2" width="150" x="500" y="180"></rect>
+<rect fill="#4edea3" fill-opacity="0.1" height="30" rx="2" stroke="#4edea3" stroke-width="1.5" width="150" x="500" y="180"></rect>
+<text fill="#6ffbbe" font-family="JetBrains Mono" font-size="9" font-weight="700" x="506" y="194">
+                BLOCK B-09: POINT MACHINE (SMMS)
+              </text>
+<text fill="#4edea3" font-family="JetBrains Mono" font-size="8" x="506" y="205">
+                07:30 - 09:45 | TDL INTERLOCK
+              </text>
+</g>
+<!-- CONFLICT ZONE C-04: TMS Rail Renewal clashing with Rajdhani -->
+<g class="cursor-pointer" id="conflict-zone-04">
+<rect fill="#93000a" fill-opacity="0.25" height="38" rx="3" stroke="#ffb4ab" stroke-dasharray="2 2" stroke-width="1.5" width="55" x="260" y="160"></rect>
+<circle cx="288" cy="179" fill="url(#conflict-glow)" r="14"></circle>
+<circle cx="288" cy="179" fill="#ffb4ab" r="4"></circle>
+</g>
+<!-- TRAIN PATH STRINGS (TRAJECTORIES) -->
+<!-- 1. Train 12424 Dibrugarh Rajdhani Express (UP Main - Sharp Fast Gradient) -->
+<!-- From GZB (y=10) around 01:15 to CNB (y=370) at 05:40 -->
+<path d="M 83 10 L 195 95 L 288 179 L 360 270 L 440 370" fill="none" stroke="#4cd7f6" stroke-linecap="round" stroke-width="3"></path>
+<!-- Delay deviation projection dashed line -->
+<path d="M 288 179 L 340 270 L 495 370" fill="none" stroke="#ffb4ab" stroke-dasharray="4 3" stroke-width="2"></path>
+<!-- 2. Train 12004 Lucknow Shatabdi Express (UP Fast) -->
+<path d="M 400 10 L 485 95 L 565 185 L 635 270 L 710 370" fill="none" stroke="#4cd7f6" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- 3. Train 22436 Vande Bharat Express (DN High Speed - Opposing Trajectory) -->
+<!-- From CNB (y=370) at 02:00 to GZB (y=10) at 05:45 -->
+<path d="M 133 370 L 210 270 L 305 185 L 375 95 L 435 10" fill="none" stroke="#ffb95f" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- 4. Train 12301 Howrah Rajdhani Express (DN Main) -->
+<path d="M 480 370 L 555 270 L 640 185 L 720 95 L 785 10" fill="none" stroke="#acedff" stroke-dasharray="5 2" stroke-width="2"></path>
+<!-- 5. Freight Goods Container BCNHL-640 (Slow Freight - Shallow Angle) -->
+<path d="M 20 10 L 180 95 L 380 185 L 590 270 L 790 370" fill="none" stroke="#869397" stroke-width="1.8"></path>
+<!-- 6. POL Petroleum Tanker Special (Slow Freight) -->
+<path d="M 250 10 L 440 95 L 670 185" fill="none" stroke="#869397" stroke-dasharray="2 2" stroke-width="1.5"></path>
+<!-- Train Label Badges on String Chart -->
+<g transform="translate(195, 78)">
+<rect fill="#003640" height="15" rx="2" stroke="#4cd7f6" stroke-width="1" width="75" x="0" y="0"></rect>
+<text fill="#4cd7f6" font-family="JetBrains Mono" font-size="8" font-weight="700" text-anchor="middle" x="37" y="11">12424 RAJ (UP)</text>
+</g>
+<g transform="translate(240, 240)">
+<rect fill="#472a00" height="15" rx="2" stroke="#ffb95f" stroke-width="1" width="72" x="0" y="0"></rect>
+<text fill="#ffb95f" font-family="JetBrains Mono" font-size="8" font-weight="700" text-anchor="middle" x="36" y="11">22436 VB (DN)</text>
+</g>
+<g transform="translate(565, 290)">
+<rect fill="#0a0e18" height="15" rx="2" stroke="#869397" stroke-width="1" width="80" x="0" y="0"></rect>
+<text fill="#dfe2f1" font-family="JetBrains Mono" font-size="8" font-weight="500" text-anchor="middle" x="40" y="11">BCNHL-640 (FRT)</text>
+</g>
+</svg>
+<!-- Floating Conflict Marker Hover Dialog (Positioned exactly at Conflict C-04) -->
+<div class="absolute left-[34%] top-[42%] z-20 pointer-events-auto">
+<div class="relative flex flex-col p-panel-padding-sm rounded bg-surface-container-high shadow-xl text-on-surface max-w-xs -translate-x-1/2">
+<div class="flex items-center justify-between gap-gutter-sm pb-1">
+<span class="flex items-center gap-1 font-label-caps text-label-caps text-error font-bold uppercase">
+<span class="material-symbols-outlined text-[12px]">fmd_bad</span> Conflict C-04 [km 184]
+                </span>
+<span class="font-telemetry-sm text-[10px] text-error font-bold">ETA 04:18 IST</span>
+</div>
+<p class="font-body-sm text-[11px] leading-tight text-on-surface">
+                Clash: <strong class="text-secondary">Track Renewal TMS-8841</strong> on UP line vs <strong class="text-primary">12424 Rajdhani</strong>.
+              </p>
+<div class="mt-1 flex items-center justify-between pt-1">
+<span class="font-telemetry-sm text-[10px] text-error font-semibold">+42m Delay Projected</span>
+<span class="font-label-caps text-[9px] text-primary underline cursor-pointer">View Mitigation</span>
+</div>
+</div>
+</div>
+<!-- Current Time Vertical Cursor Indicator -->
+<div class="absolute top-0 bottom-0 left-[28%] w-px bg-primary pointer-events-none shadow-[0_0_8px_#4cd7f6]">
+<div class="absolute top-0 -left-6 px-1 rounded bg-primary text-on-primary font-telemetry-sm text-[9px] font-bold">
+              03:22 IST
+            </div>
+</div>
+</div>
+</div>
+<!-- Graph Legend and Action Footer -->
+<div class="flex items-center justify-between px-panel-padding-md py-gutter-xs bg-surface-container-low text-on-surface-variant font-label-caps text-label-caps border-none">
+<div class="flex items-center gap-gutter-md flex-wrap">
+<span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-primary"></span> Rajdhani / Shatabdi Premium</span>
+<span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-secondary"></span> Vande Bharat Semi-High Speed</span>
+<span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-outline"></span> Scheduled Freight / BOXN</span>
+<span class="flex items-center gap-1"><span class="w-3 h-1 bg-secondary opacity-60"></span> Maintenance Block Zone</span>
+<span class="flex items-center gap-1"><span class="w-3 h-0.5 border-t border-dashed border-error"></span> Projected Delay Path</span>
+</div>
+<div class="flex items-center gap-gutter-xs">
+<span class="text-on-surface font-telemetry-sm">MAREY ENGINE REFRESH:</span>
+<span class="text-primary font-telemetry-sm font-bold">12s AUTO</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: Bottom Split Section (Dynamic Conflict Cockpit & Backlog Grant Control) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-gutter-md">
+<!-- LEFT PANEL: Dynamic Conflict Cockpit (5 cols) -->
+<div class="xl:col-span-5 rounded bg-surface-container-low p-panel-padding-md shadow-md flex flex-col justify-between gap-gutter-md">
+<div class="flex flex-col gap-gutter-sm">
+<!-- Panel Header -->
+<div class="flex items-center justify-between pb-gutter-xs">
+<div class="flex items-center gap-gutter-xs">
+<div class="w-2 h-4 bg-error rounded"></div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase">
+              Conflict Cockpit
+            </h3>
+</div>
+<span class="px-gutter-xs py-0.5 rounded bg-error-container text-on-error-container font-label-caps text-label-caps font-bold animate-pulse">
+            2 CRITICAL CLASHES
+          </span>
+</div>
+<div class="p-panel-padding-sm rounded bg-surface-container-lowest text-on-surface-variant font-body-sm text-body-sm">
+          Algorithmic collision detection evaluated across <strong class="text-on-surface">36 trains</strong> and <strong class="text-on-surface">8 engineering possessions</strong> for the next 8-hour window.
+        </div>
+<!-- Conflict Card 1 (CRITICAL) -->
+<div class="p-panel-padding-md rounded bg-surface-container flex flex-col gap-gutter-xs shadow-sm">
+<div class="flex items-center justify-between">
+<span class="px-panel-padding-sm py-0.5 rounded bg-error-container text-on-error-container font-label-caps text-label-caps font-bold">
+              CRITICAL CONFLICT #C-04
+            </span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">Tundla Outer • km 184</span>
+</div>
+<div class="flex flex-col">
+<div class="font-body-md text-body-md font-bold text-on-surface">
+              TMS Track Renewal clashes with 12424 Rajdhani
+            </div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              Possession request TMS-8841 (Deep Screening) blocks UP Main [04:00 - 07:30]. Clashes with Train 12424 Dibrugarh Rajdhani expected at km 184 at 04:18 IST.
+            </p>
+</div>
+<!-- Impact Metrics Grid -->
+<div class="grid grid-cols-3 gap-gutter-xs py-1 text-center font-telemetry-sm text-telemetry-sm">
+<div class="p-1 rounded bg-surface-container-lowest">
+<div class="font-label-caps text-[9px] text-on-surface-variant">UNMITIGATED DELAY</div>
+<div class="text-error font-bold">+42 MIN</div>
+</div>
+<div class="p-1 rounded bg-surface-container-lowest">
+<div class="font-label-caps text-[9px] text-on-surface-variant">KNOCK-ON IMPACT</div>
+<div class="text-secondary font-bold">4 TRAINS</div>
+</div>
+<div class="p-1 rounded bg-surface-container-lowest">
+<div class="font-label-caps text-[9px] text-on-surface-variant">COST PENALTY</div>
+<div class="text-on-surface font-bold">₹1.84 LAKH</div>
+</div>
+</div>
+<!-- Recommended Action Card -->
+<div class="p-panel-padding-sm rounded bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-gutter-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">psychology</span>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-primary font-bold">OR-TOOLS CP-SAT RECOMMENDS:</span>
+<span class="font-body-sm text-body-sm text-on-surface">Divert Rajdhani to 3rd Line (Loop bypass at TDL)</span>
+</div>
+</div>
+<span class="font-telemetry-sm text-tertiary font-bold">+3m NET</span>
+</div>
+</div>
+<!-- Conflict Card 2 (WARNING) -->
+<div class="p-panel-padding-md rounded bg-surface-container flex flex-col gap-gutter-xs shadow-sm">
+<div class="flex items-center justify-between">
+<span class="px-panel-padding-sm py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-caps text-label-caps font-bold">
+              WARNING CONFLICT #C-05
+            </span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">Hathras Jn • km 132</span>
+</div>
+<div class="font-body-md text-body-md font-bold text-on-surface">
+            TDMS Catenary Isolator Block vs 22436 Vande Bharat (DN)
+          </div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Requested OHE isolation overlap leaves only 6 minutes clearance margin for Section Breaker 14-B re-energization prior to Vande Bharat entry.
+          </p>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-caps text-label-caps text-secondary font-bold">MARGIN DEFICIT: -14 MIN</span>
+<span class="font-body-sm text-body-sm text-primary underline cursor-pointer">Shift Slot to 05:40 IST</span>
+</div>
+</div>
+</div>
+<!-- Action Trigger Buttons -->
+<div class="flex flex-col gap-gutter-xs pt-gutter-xs">
+<button class="w-full py-2.5 px-gutter-md rounded bg-primary-container text-on-primary font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-gutter-sm shadow-[0_0_16px_rgba(6,182,212,0.4)] hover:brightness-110 active:scale-[0.99] transition-all" id="solver-btn">
+<span class="material-symbols-outlined text-[20px]">auto_fix_high</span>
+<span>SOLVE VIA OR-TOOLS CP-SAT SOLVER</span>
+</button>
+<div class="flex items-center justify-between px-panel-padding-sm font-telemetry-sm text-[11px] text-on-surface-variant">
+<span>LATENCY: 140ms</span>
+<span>FEASIBLE SLOTS: 3 AVAILABLE</span>
+<span class="text-tertiary">SOLVER CONVERGED</span>
+</div>
+<div class="grid grid-cols-2 gap-gutter-xs pt-1">
+<button class="py-1.5 px-gutter-sm rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-label-caps text-label-caps font-bold uppercase transition-colors">
+            Auto-Reroute to 3rd Line
+          </button>
+<button class="py-1.5 px-gutter-sm rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-label-caps text-label-caps font-bold uppercase transition-colors">
+            Simulate Pre-Warning Speed
+          </button>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: Multi-Department Possession Backlog & Authorization Control (7 cols) -->
+<div class="xl:col-span-7 rounded bg-surface-container-low p-panel-padding-md shadow-md flex flex-col justify-between gap-gutter-md">
+<div class="flex flex-col gap-gutter-sm">
+<!-- Header & Category Tabs -->
+<div class="flex items-center justify-between flex-wrap gap-gutter-xs pb-gutter-xs">
+<div class="flex items-center gap-gutter-xs">
+<div class="w-2 h-4 bg-tertiary rounded"></div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase">
+              Possession Backlog &amp; Authorizations
+            </h3>
+</div>
+<!-- Department Filter Pills -->
+<div class="flex rounded bg-surface-container-lowest p-0.5 font-label-caps text-label-caps">
+<button class="px-gutter-sm py-1 rounded bg-primary text-on-primary font-bold">ALL (7)</button>
+<button class="px-gutter-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-semibold">TMS TRACK (3)</button>
+<button class="px-gutter-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-semibold">SMMS SIGNALS (2)</button>
+<button class="px-gutter-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-semibold">TDMS OHE (2)</button>
+</div>
+</div>
+<!-- Authorized Notice Banner -->
+<div class="hidden p-panel-padding-sm rounded bg-tertiary-container text-on-tertiary-container flex items-center justify-between" id="grant-success-banner">
+<div class="flex items-center gap-gutter-xs font-telemetry-sm text-telemetry-sm font-bold">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+            PRIVATE NUMBER ISSUED: <span class="font-bold underline" id="issued-priv-no">NCR-PL-2025-0842</span> (SECTION INTERLOCKED)
+          </div>
+<span class="font-label-caps text-[10px] uppercase">COA LOGGED</span>
+</div>
+<!-- High-Density Telemetry Table -->
+<div class="overflow-x-auto rounded bg-surface-container-lowest">
+<table class="w-full text-left font-body-sm text-body-sm">
+<thead class="bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps uppercase">
+<tr>
+<th class="py-2.5 px-panel-padding-sm">ID &amp; Dept</th>
+<th class="py-2.5 px-panel-padding-sm">Section / Line</th>
+<th class="py-2.5 px-panel-padding-sm">Description</th>
+<th class="py-2.5 px-panel-padding-sm">ML Pred. Dur</th>
+<th class="py-2.5 px-panel-padding-sm">Risk Prob</th>
+<th class="py-2.5 px-panel-padding-sm">AI Bundling</th>
+<th class="py-2.5 px-panel-padding-sm text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface">
+<!-- ROW 1: TMS-8841 -->
+<tr class="bg-surface-container hover:bg-surface-container-high transition-colors group">
+<td class="py-2.5 px-panel-padding-sm">
+<div class="flex flex-col">
+<span class="font-telemetry-sm text-telemetry-sm text-primary font-bold">TMS-8841</span>
+<span class="font-label-caps text-[9px] text-on-surface-variant">ENGG (CIVIL)</span>
+</div>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="font-telemetry-sm text-telemetry-sm font-semibold">ALJN-Hathras</span>
+<span class="block font-label-caps text-[9px] text-secondary">UP SLOW (L-1)</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="truncate max-w-[130px]" title="Deep Screening Machine (BCM) ballast cleaning">
+                    BCM Ballast Clean
+                  </div>
+<span class="font-telemetry-sm text-[10px] text-outline">Req: 3h 30m</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="font-telemetry-sm text-telemetry-sm font-bold text-error">4h 10m</div>
+<span class="font-label-caps text-[9px] text-error">+40m Overrun</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-telemetry-sm text-[10px] font-bold">
+                    HIGH (78%)
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-tertiary font-label-caps text-[9px] font-bold">
+                    +SMMS-402
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm text-right">
+<button class="px-gutter-sm py-1 rounded bg-secondary text-on-secondary font-label-caps text-label-caps font-bold hover:brightness-110 active:scale-95 transition-all" onclick="issueBlock('TMS-8841')">
+                    Grant &amp; Priv No
+                  </button>
+</td>
+</tr>
+<!-- ROW 2: TDMS-2109 -->
+<tr class="bg-surface-container-low hover:bg-surface-container-high transition-colors group">
+<td class="py-2.5 px-panel-padding-sm">
+<div class="flex flex-col">
+<span class="font-telemetry-sm text-telemetry-sm text-secondary font-bold">TDMS-2109</span>
+<span class="font-label-caps text-[9px] text-on-surface-variant">TRD (ELECTRICAL)</span>
+</div>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="font-telemetry-sm text-telemetry-sm font-semibold">Tundla Outer</span>
+<span class="block font-label-caps text-[9px] text-primary">DN FAST (L-2)</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="truncate max-w-[130px]" title="Cantilever Replacement &amp; OHE Isolation">
+                    Cantilever &amp; OHE
+                  </div>
+<span class="font-telemetry-sm text-[10px] text-outline">Req: 2h 00m</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="font-telemetry-sm text-telemetry-sm font-bold text-tertiary">2h 05m</div>
+<span class="font-label-caps text-[9px] text-tertiary">On Track (+5m)</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-tertiary font-telemetry-sm text-[10px] font-bold">
+                    LOW (14%)
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="text-on-surface-variant font-label-caps text-[9px]">STANDALONE</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm text-right">
+<button class="px-gutter-sm py-1 rounded bg-primary text-on-primary font-label-caps text-label-caps font-bold hover:brightness-110 active:scale-95 transition-all" onclick="issueBlock('TDMS-2109')">
+                    Grant &amp; Priv No
+                  </button>
+</td>
+</tr>
+<!-- ROW 3: SMMS-904 -->
+<tr class="bg-surface-container hover:bg-surface-container-high transition-colors group">
+<td class="py-2.5 px-panel-padding-sm">
+<div class="flex flex-col">
+<span class="font-telemetry-sm text-telemetry-sm text-tertiary font-bold">SMMS-904</span>
+<span class="font-label-caps text-[9px] text-on-surface-variant">S&amp;T (SIGNALS)</span>
+</div>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="font-telemetry-sm text-telemetry-sm font-semibold">Kanpur Yard</span>
+<span class="block font-label-caps text-[9px] text-on-surface-variant">PLATFORM 4 / PT 114</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="truncate max-w-[130px]" title="Point Machine 114A Overhaul &amp; Ground Connection Testing">
+                    Point Machine 114A
+                  </div>
+<span class="font-telemetry-sm text-[10px] text-outline">Req: 1h 45m</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="font-telemetry-sm text-telemetry-sm font-bold text-tertiary">1h 30m</div>
+<span class="font-label-caps text-[9px] text-tertiary">-15m Early</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-tertiary font-telemetry-sm text-[10px] font-bold">
+                    LOW (08%)
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-tertiary font-label-caps text-[9px] font-bold">
+                    +TMS-8810
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm text-right">
+<button class="px-gutter-sm py-1 rounded bg-primary text-on-primary font-label-caps text-label-caps font-bold hover:brightness-110 active:scale-95 transition-all" onclick="issueBlock('SMMS-904')">
+                    Grant &amp; Priv No
+                  </button>
+</td>
+</tr>
+<!-- ROW 4: TMS-8890 -->
+<tr class="bg-surface-container-low hover:bg-surface-container-high transition-colors group">
+<td class="py-2.5 px-panel-padding-sm">
+<div class="flex flex-col">
+<span class="font-telemetry-sm text-telemetry-sm text-primary font-bold">TMS-8890</span>
+<span class="font-label-caps text-[9px] text-on-surface-variant">ENGG (CIVIL)</span>
+</div>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="font-telemetry-sm text-telemetry-sm font-semibold">Etawah Outer</span>
+<span class="block font-label-caps text-[9px] text-secondary">UP FAST (L-1)</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="truncate max-w-[130px]" title="Ultrasonic Flaw Detection (USFD) Rail Testing">
+                    USFD Rail Testing
+                  </div>
+<span class="font-telemetry-sm text-[10px] text-outline">Req: 2h 30m</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<div class="font-telemetry-sm text-telemetry-sm font-bold text-on-surface">2h 30m</div>
+<span class="font-label-caps text-[9px] text-outline">Nominal</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-secondary font-telemetry-sm text-[10px] font-bold">
+                    MED (32%)
+                  </span>
+</td>
+<td class="py-2.5 px-panel-padding-sm">
+<span class="text-on-surface-variant font-label-caps text-[9px]">STANDALONE</span>
+</td>
+<td class="py-2.5 px-panel-padding-sm text-right">
+<button class="px-gutter-sm py-1 rounded bg-primary text-on-primary font-label-caps text-label-caps font-bold hover:brightness-110 active:scale-95 transition-all" onclick="issueBlock('TMS-8890')">
+                    Grant &amp; Priv No
+                  </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Station Master Handshake & Authorization Status Footer -->
+<div class="p-panel-padding-sm rounded bg-surface-container flex items-center justify-between flex-wrap gap-gutter-sm">
+<div class="flex items-center gap-gutter-sm">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[16px]">key</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">ACTIVE STATION MASTER HANDSHAKE:</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-semibold">TDL SS-DESK 02 • DIGITAL SIGN OFF OK</span>
+</div>
+</div>
+<div class="flex items-center gap-gutter-xs">
+<button class="px-gutter-sm py-1 rounded bg-surface-container-highest text-on-surface font-label-caps text-label-caps font-bold hover:bg-surface-bright transition-colors uppercase">
+            Print Caution Order
+          </button>
+<button class="px-gutter-sm py-1 rounded bg-surface-container-highest text-primary font-label-caps text-label-caps font-bold hover:bg-surface-bright transition-colors uppercase">
+            Audit Trail
+          </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Operational Status Bar (Zero-Latency Bottom Banner) -->
+<footer class="flex items-center justify-between px-panel-padding-md py-gutter-xs rounded bg-surface-container-lowest text-on-surface-variant font-telemetry-sm text-[11px]">
+<div class="flex items-center gap-gutter-md">
+<span class="flex items-center gap-1 text-tertiary"><span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> FOIS / ICMS SYNCED</span>
+<span class="flex items-center gap-1 text-primary"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> TMS ASSET HEALTH: 99.8%</span>
+<span class="flex items-center gap-1 text-secondary"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> 2 CAUTION ORDERS ACTIVE</span>
+</div>
+<div>
+<span>INDIAN RAILWAYS • NORTH CENTRAL RAILWAY • PRAYAGRAJ DIVISION SAMANVAY-AI CONTROLLER</span>
+</div>
+</footer>
+</div>
+<script>
+  // Micro-interactions and Operational Simulator
+  function issueBlock(blockId) {
+    const banner = document.getElementById('grant-success-banner');
+    const privNoLabel = document.getElementById('issued-priv-no');
+    
+    // Generate authentic Indian Railways Private Number format
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const privNumber = `NCR-PRYJ-${new Date().getFullYear()}-${randomDigits}`;
+    
+    if (privNoLabel) privNoLabel.innerText = privNumber;
+    if (banner) {
+      banner.classList.remove('hidden');
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  const solverBtn = document.getElementById('solver-btn');
+  if (solverBtn) {
+    solverBtn.addEventListener('click', function () {
+      const originalText = solverBtn.innerHTML;
+      solverBtn.innerHTML = `
+        <span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
+        <span>COMPUTING OPTIMAL CORRIDOR SLOTS...</span>
+      `;
+      solverBtn.disabled = true;
+
+      setTimeout(() => {
+        solverBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[20px] text-tertiary">task_alt</span>
+          <span class="text-tertiary">OPTIMAL SCHEDULE COMPUTED (+0m IMPACT)</span>
+        `;
+        
+        // Visual feedback on conflict card
+        const conflictZone = document.getElementById('conflict-zone-04');
+        if (conflictZone) {
+          conflictZone.innerHTML = `
+            <rect x="260" y="160" width="55" height="38" fill="#005236" fill-opacity="0.3" stroke="#4edea3" stroke-width="1.5" rx="3"/>
+            <text x="288" y="183" fill="#4edea3" font-size="9" font-family="JetBrains Mono" font-weight="700" text-anchor="middle">RESOLVED</text>
+          `;
+        }
+
+        setTimeout(() => {
+          solverBtn.innerHTML = originalText;
+          solverBtn.disabled = false;
+        }, 3500);
+      }, 700);
+    });
+  }
+
+  const toggleConflictBtn = document.getElementById('toggle-conflicts-btn');
+  if (toggleConflictBtn) {
+    toggleConflictBtn.addEventListener('click', function() {
+      const conflictEl = document.getElementById('conflict-zone-04');
+      if (conflictEl) {
+        conflictEl.classList.toggle('opacity-30');
+      }
+    });
+  }
+</script></main></div></body></html>

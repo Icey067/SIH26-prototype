@@ -1,5 +1,16 @@
 import axios from "axios";
-import { Defect, MaintenanceBlock, WeatherReport, AIParsedDefectResponse } from "@/types/railway";
+import {
+  Defect,
+  MaintenanceBlock,
+  WeatherReport,
+  AIParsedDefectResponse,
+  DurationPredictionPayload,
+  DurationPredictionResponse,
+  ConflictReport,
+  CorridorGraphResponse,
+  TrainTrajectory,
+  OptimizationBundleResponse,
+} from "@/types/railway";
 
 const API_BASE_URL = "http://localhost:8000/api/v1";
 
@@ -22,7 +33,7 @@ export const RailwayAPI = {
       raw_text: rawText,
       track_section_id: "NCR-GZB-TDL-UP",
       auto_create: autoCreate,
-      reported_by: "DISPATCHER_VOICE_CONSOLE"
+      reported_by: "DISPATCHER_VOICE_CONSOLE",
     });
     return res.data;
   },
@@ -30,6 +41,11 @@ export const RailwayAPI = {
   // Maintenance Blocks
   async getBlocks(status?: string): Promise<MaintenanceBlock[]> {
     const res = await api.get("/blocks", { params: { status } });
+    return res.data;
+  },
+
+  async createBlock(blockPayload: Partial<MaintenanceBlock>): Promise<MaintenanceBlock> {
+    const res = await api.post("/blocks", blockPayload);
     return res.data;
   },
 
@@ -58,6 +74,41 @@ export const RailwayAPI = {
     return res.data;
   },
 
+  async runOptimizationBundle(trackSectionId = "NCR-GZB-TDL-UP", line = "UP"): Promise<OptimizationBundleResponse> {
+    const res = await api.post("/blocks/optimize/bundle", null, {
+      params: { track_section_id: trackSectionId, line },
+    });
+    return res.data;
+  },
+
+  // Module 1: Network Graph & Trajectories
+  async getCorridorGraph(): Promise<CorridorGraphResponse> {
+    const res = await api.get("/network/graph");
+    return res.data;
+  },
+
+  async getTrainTrajectories(): Promise<TrainTrajectory[]> {
+    const res = await api.get("/network/trajectories");
+    return res.data.trajectories || [];
+  },
+
+  // Module 2: Scikit-Learn Predictive Duration & Overrun Risk
+  async predictDurationAndRisk(payload: DurationPredictionPayload): Promise<DurationPredictionResponse> {
+    const res = await api.post("/predict/duration-and-risk", payload);
+    return res.data;
+  },
+
+  // Module 3: Conflict Detection
+  async detectConflicts(blocks: any[]): Promise<ConflictReport> {
+    const res = await api.post("/conflicts/detect", { blocks });
+    return res.data;
+  },
+
+  async getActiveConflicts(): Promise<ConflictReport> {
+    const res = await api.get("/conflicts/active");
+    return res.data;
+  },
+
   // Live Telemetry & Weather
   async getLiveTelemetry() {
     const res = await api.get("/live/telemetry");
@@ -72,8 +123,8 @@ export const RailwayAPI = {
   // Timetable
   async getTimetableGaps(sectionId = "NCR-GZB-TDL-UP", line = "UP") {
     const res = await api.get("/timetable/gaps", {
-      params: { track_section_id: sectionId, line, min_gap_minutes: 60 }
+      params: { track_section_id: sectionId, line, min_gap_minutes: 60 },
     });
     return res.data;
-  }
+  },
 };
