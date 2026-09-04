@@ -19,6 +19,12 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import Dashboard from "./pages/Dashboard";
+import LandingPage from "./pages/LandingPage";
+import CorridorRadarPage from "./pages/Operations/CorridorRadarPage";
+import ActiveBlocksPage from "./pages/Operations/ActiveBlocksPage";
+import TimetableGanttPage from "./pages/Operations/TimetableGanttPage";
+import DefectTriagePage from "./pages/Operations/DefectTriagePage";
+import TrackWeatherPage from "./pages/Operations/TrackWeatherPage";
 
 export default function App() {
   return (
@@ -26,11 +32,19 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
+          {/* Public Landing — no AppLayout shell */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/landing" element={<LandingPage />} />
+
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
-            <Route index path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/operations" element={<Home />} />
+            <Route path="/corridor-radar" element={<CorridorRadarPage />} />
+            <Route path="/active-blocks" element={<ActiveBlocksPage />} />
+            <Route path="/timetable-gantt" element={<TimetableGanttPage />} />
+            <Route path="/defect-triage" element={<DefectTriagePage />} />
+            <Route path="/track-weather" element={<TrackWeatherPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

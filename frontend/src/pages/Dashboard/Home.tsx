@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { Header } from "@/components/dashboard/Header";
 import { TimeDistanceDiagram } from "@/components/dashboard/TimeDistanceDiagram";
+import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
 import { ConflictCockpit } from "@/components/dashboard/ConflictCockpit";
 import { CorridorRadar } from "@/components/dashboard/CorridorRadar";
 import { DefectMatrix } from "@/components/dashboard/DefectMatrix";
@@ -48,6 +49,7 @@ export default function Home() {
 
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
+  const [stringChartView, setStringChartView] = useState<"3D" | "2D">("3D");
 
   // Modals
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -270,14 +272,51 @@ export default function Home() {
           />
         </div>
 
-        {/* Module 1: Time-Distance String Chart (Mares-Chauveau 2D Diagram) */}
-        <div id="string-chart">
-          <TimeDistanceDiagram
-            trajectories={trajectories}
-            blocks={blocks}
-            conflicts={conflictReport?.conflicts || []}
-            onOpenGrantModal={handleOpenGrant}
-          />
+        {/* Module 1: Space-Time Rail Matrix (3D WebGL Cube / 2D Mares-Chauveau Diagram) */}
+        <div id="string-chart" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                CHART VIEWPORT:
+              </span>
+              <div className="flex items-center bg-zinc-900/90 border border-zinc-800 p-0.5 rounded">
+                <button
+                  onClick={() => setStringChartView("3D")}
+                  className={`px-3 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
+                    stringChartView === "3D"
+                      ? "bg-cyan-500 text-black shadow"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  3D SPACE-TIME MATRIX
+                </button>
+                <button
+                  onClick={() => setStringChartView("2D")}
+                  className={`px-3 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
+                    stringChartView === "2D"
+                      ? "bg-cyan-500 text-black shadow"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  2D STRING CHART
+                </button>
+              </div>
+            </div>
+            <span className="hidden sm:inline font-mono text-[11px] text-zinc-500">
+              {stringChartView === "3D" ? "THREE.JS + R3F MULTI-PLANE VIEW" : "MARES-CHAUVEAU 2D PROJECTION"}
+            </span>
+          </div>
+
+          {stringChartView === "3D" ? (
+            <ThreeDStringChart />
+          ) : (
+            <TimeDistanceDiagram
+              trajectories={trajectories}
+              blocks={blocks}
+              conflicts={conflictReport?.conflicts || []}
+              onOpenGrantModal={handleOpenGrant}
+            />
+          )}
         </div>
 
         {/* Section: Live Corridor Schematic Radar */}

@@ -19,6 +19,8 @@ import {
   Brain,
 } from "lucide-react";
 
+import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
+
 export default function Dashboard() {
   const [trains, setTrains] = useState<TrainTelemetry[]>([]);
   const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
@@ -27,6 +29,7 @@ export default function Dashboard() {
   const [conflictReport, setConflictReport] = useState<ConflictReport | null>(null);
 
   // UI Interactive States
+  const [chartDisplayMode, setChartDisplayMode] = useState<"3D" | "2D">("3D");
   const [selectedDirection, setSelectedDirection] = useState<"UP" | "DN" | "ALL">("UP");
   const [highlightConflicts, setHighlightConflicts] = useState<boolean>(true);
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<"ALL" | "TMS" | "SMMS" | "TDMS">("ALL");
@@ -405,6 +408,32 @@ export default function Dashboard() {
 
             {/* Chart View Controls */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* 3D vs 2D Toggle Button */}
+              <div className="flex rounded bg-surface-container-lowest p-0.5 border border-primary/40 shadow-sm">
+                <button
+                  onClick={() => setChartDisplayMode("3D")}
+                  className={`px-3 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                    chartDisplayMode === "3D"
+                      ? "bg-primary text-on-primary shadow"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  3D SPACE-TIME MATRIX
+                </button>
+                <button
+                  onClick={() => setChartDisplayMode("2D")}
+                  className={`px-3 py-1 rounded font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                    chartDisplayMode === "2D"
+                      ? "bg-primary text-on-primary shadow"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  2D MAREY GRAPH
+                </button>
+              </div>
+
+              <div className="h-4 w-px bg-surface-container-highest"></div>
+
               <div className="flex rounded bg-surface-container-lowest p-0.5 border border-surface-container-high">
                 <button
                   onClick={() => setSelectedDirection("UP")}
@@ -457,9 +486,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Main Marey Graph Canvas Frame */}
-          <div className="relative w-full rounded bg-surface-container-lowest overflow-hidden border border-surface-container-high">
-            {/* Top Time Slot Header */}
+          {/* Main Marey Graph or 3D Space-Time Rail Matrix */}
+          {chartDisplayMode === "3D" ? (
+            <div className="w-full">
+              <ThreeDStringChart />
+            </div>
+          ) : (
+            <div className="relative w-full rounded bg-surface-container-lowest overflow-hidden border border-surface-container-high">
+              {/* Top Time Slot Header */}
             <div className="grid grid-cols-7 pl-28 pr-4 py-1.5 bg-surface-container text-on-surface-variant font-mono text-[11px] border-b border-surface-container-high">
               <div>00:00</div>
               <div>02:00</div>
@@ -654,6 +688,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          )}
         </section>
 
         {/* SECTION 3: Bottom Split Section (Dynamic Conflict Cockpit & Backlog Grant Control) */}
