@@ -1,607 +1,743 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Text, Html, Line } from "@react-three/drei";
+import { OrbitControls, Text, Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import {
-  Layers,
-  Box,
-  Compass,
-  AlertTriangle,
   RotateCcw,
-  Maximize2,
-  Eye,
-  Info,
+  Train as TrainIcon,
+  Shield,
+  Wrench,
+  Navigation,
+  Building2,
+  Building,
   Radio,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-// ─── Mathematical Coordinate Mapping Helpers ─────────────────────────────────
-// Time: 00:00 (0m) to 12:00 (720m) mapped to X: -10 to +10
-const timeToX = (minutes: number): number => {
-  const clamped = Math.max(0, Math.min(720, minutes));
-  return -10 + (clamped / 720) * 20;
-};
+// ─── Train GLTF Models ───────────────────────────────────────────────────────
 
-// Distance: GZB (0 km) to CNB (440 km) mapped to Y: +5.5 to -5.5
-const kmToY = (km: number): number => {
-  const clamped = Math.max(0, Math.min(440, km));
-  return 5.5 - (clamped / 440) * 11;
-};
-
-// Station Keypoints
-const STATIONS = [
-  { code: "GZB", name: "Ghaziabad", km: 0 },
-  { code: "ALJN", name: "Aligarh Jn", km: 126 },
-  { code: "TDL", name: "Tundla Jn", km: 204 },
-  { code: "ETW", name: "Etawah Jn", km: 296 },
-  { code: "CNB", name: "Kanpur Central", km: 440 },
-];
-
-// Z-Planes for Track Lines
-const Z_PLANES = {
-  UP: -2.5,
-  DOWN: 0.0,
-  LOOP: 2.5,
-};
-
-// ─── Camera Controller for Smooth 2D / 3D Interpolation ─────────────────────
-function CameraController({ is2D, resetTrigger }: { is2D: boolean; resetTrigger: number }) {
-  const { camera } = useThree();
-  const controlsRef = useRef<any>(null);
-
-  // Target camera coordinates
-  const targetPos = useRef(new THREE.Vector3(12, 10, 15));
-  const targetLookAt = useRef(new THREE.Vector3(0, 0, 0));
-
-  React.useEffect(() => {
-    if (is2D) {
-      targetPos.current.set(0, 0, 18);
-      targetLookAt.current.set(0, 0, 0);
-    } else {
-      targetPos.current.set(12, 10, 15);
-      targetLookAt.current.set(0, 0, 0);
-    }
-  }, [is2D, resetTrigger]);
-
-  useFrame(() => {
-    camera.position.lerp(targetPos.current, 0.06);
-    if (controlsRef.current) {
-      controlsRef.current.target.lerp(targetLookAt.current, 0.06);
-      controlsRef.current.update();
-    }
-  });
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      enableDamping
-      dampingFactor={0.05}
-      maxPolarAngle={Math.PI / 2 + 0.15}
-      minPolarAngle={0.05}
-      maxDistance={35}
-      minDistance={6}
-    />
-  );
+function BulletTrainModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-electric-bullet-a.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
 }
 
-// ─── Parallel Track Grid Planes (UP, DOWN, LOOP) ─────────────────────────────
-function GridPlanes() {
-  const timeLabels = [
-    { label: "00:00", min: 0 },
-    { label: "02:00", min: 120 },
-    { label: "04:00", min: 240 },
-    { label: "06:00", min: 360 },
-    { label: "08:00", min: 480 },
-    { label: "10:00", min: 600 },
-    { label: "12:00", min: 720 },
-  ];
-
-  return (
-    <group>
-      {/* 3 Track Planes: UP (-2.5), DOWN (0.0), LOOP (+2.5) */}
-      {[
-        { z: Z_PLANES.UP, name: "UP LINE [FAST EXPRESS]", color: "#06B6D4" },
-        { z: Z_PLANES.DOWN, name: "DOWN LINE [TRUNK CORRIDOR]", color: "#10B981" },
-        { z: Z_PLANES.LOOP, name: "3RD / LOOP LINE [FREIGHT / OVERTAKE]", color: "#64748B" },
-      ].map((plane) => (
-        <group key={plane.z} position={[0, 0, plane.z]}>
-          {/* Subtle Wireframe Boundary Plane */}
-          <mesh position={[0, 0, -0.01]}>
-            <planeGeometry args={[20, 11]} />
-            <meshBasicMaterial
-              color={plane.color}
-              wireframe
-              transparent
-              opacity={0.07}
-            />
-          </mesh>
-
-          {/* Plane Backdrop with slight tint */}
-          <mesh position={[0, 0, -0.02]}>
-            <planeGeometry args={[20, 11]} />
-            <meshBasicMaterial
-              color="#09090b"
-              transparent
-              opacity={0.35}
-            />
-          </mesh>
-
-          {/* Plane Label Tag on Left Margin */}
-          <Text
-            position={[-10.4, 6.0, 0]}
-            fontSize={0.28}
-            color={plane.color}
-            anchorX="left"
-            anchorY="bottom"
-            font=""
-          >
-            {plane.name}
-          </Text>
-
-          {/* Station Horizontal Guide Lines */}
-          {STATIONS.map((stn) => {
-            const y = kmToY(stn.km);
-            return (
-              <group key={stn.code}>
-                {/* Horizontal Guide Line across 00:00 to 12:00 */}
-                <Line
-                  points={[
-                    [-10, y, 0],
-                    [10, y, 0],
-                  ]}
-                  color={stn.km === 0 || stn.km === 440 ? "#71717a" : "#27272a"}
-                  lineWidth={stn.km === 0 || stn.km === 440 ? 1.5 : 0.8}
-                  dashed={stn.km !== 0 && stn.km !== 440}
-                  dashScale={40}
-                  dashSize={0.4}
-                  gapSize={0.2}
-                />
-
-                {/* 3D Station Monospace Text Label */}
-                <Text
-                  position={[-10.3, y, 0]}
-                  fontSize={0.24}
-                  color={stn.km === 0 || stn.km === 440 ? "#e4e4e7" : "#a1a1aa"}
-                  anchorX="right"
-                  anchorY="middle"
-                >
-                  {`${stn.code} (${stn.km}km)`}
-                </Text>
-              </group>
-            );
-          })}
-
-          {/* Vertical Time Interval Grid Lines */}
-          {timeLabels.map((t) => {
-            const x = timeToX(t.min);
-            return (
-              <group key={t.label}>
-                <Line
-                  points={[
-                    [x, -5.5, 0],
-                    [x, 5.5, 0],
-                  ]}
-                  color="#18181b"
-                  lineWidth={0.6}
-                  dashed
-                  dashScale={30}
-                  dashSize={0.3}
-                  gapSize={0.3}
-                />
-                {/* Time Axis Monospace Labels along bottom */}
-                <Text
-                  position={[x, -5.85, 0]}
-                  fontSize={0.22}
-                  color="#71717a"
-                  anchorX="center"
-                  anchorY="top"
-                >
-                  {t.label}
-                </Text>
-              </group>
-            );
-          })}
-        </group>
-      ))}
-
-      {/* Axis Framing Hairline Brackets */}
-      <Line
-        points={[
-          [-10, 5.5, Z_PLANES.UP],
-          [-10, -5.5, Z_PLANES.UP],
-          [10, -5.5, Z_PLANES.UP],
-        ]}
-        color="#3f3f46"
-        lineWidth={1.2}
-      />
-    </group>
-  );
+function BulletCarriageModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-electric-bullet-b.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
 }
 
-// ─── Glowing 3D Train Trajectories ───────────────────────────────────────────
-function TrainTrajectories() {
-  // 1. Rajdhani Express 12424 (UP Line: Z = -2.5)
-  // Departs GZB at 02:00 (120m), arrives CNB at 06:30 (390m)
-  // Critical conflict point: enters Block A-14 at ALJN-TDL (KM 184) at 03:45 (225m)
-  const rajdhaniPoints: [number, number, number][] = [
-    [timeToX(120), kmToY(0), Z_PLANES.UP],
-    [timeToX(180), kmToY(126), Z_PLANES.UP],
-    [timeToX(225), kmToY(184), Z_PLANES.UP], // Conflict intersection!
-    [timeToX(260), kmToY(204), Z_PLANES.UP],
-    [timeToX(320), kmToY(296), Z_PLANES.UP],
-    [timeToX(390), kmToY(440), Z_PLANES.UP],
-  ];
-
-  // 2. Vande Bharat Express 22436 (UP Line: Z = -2.5)
-  // High-speed semi-high speed run from GZB (06:00, 360m) to CNB (09:45, 585m)
-  const vandeBharatPoints: [number, number, number][] = [
-    [timeToX(360), kmToY(0), Z_PLANES.UP],
-    [timeToX(430), kmToY(126), Z_PLANES.UP],
-    [timeToX(480), kmToY(204), Z_PLANES.UP],
-    [timeToX(530), kmToY(296), Z_PLANES.UP],
-    [timeToX(585), kmToY(440), Z_PLANES.UP],
-  ];
-
-  // 3. BCNHL Freight 41108 (DOWN Line: Z = 0.0)
-  // Heavy coal rake traversing reverse from CNB (01:00, 60m) to GZB (09:30, 570m)
-  const freightPoints: [number, number, number][] = [
-    [timeToX(60), kmToY(440), Z_PLANES.DOWN],
-    [timeToX(180), kmToY(350), Z_PLANES.DOWN],
-    [timeToX(300), kmToY(250), Z_PLANES.DOWN],
-    [timeToX(420), kmToY(150), Z_PLANES.DOWN],
-    [timeToX(570), kmToY(0), Z_PLANES.DOWN],
-  ];
-
-  return (
-    <group>
-      {/* 1. Rajdhani 12424: Cyan Neon Ribbon */}
-      <Line
-        points={rajdhaniPoints}
-        color="#06B6D4"
-        lineWidth={3.5}
-      />
-      {/* Label at start of trajectory */}
-      <Text
-        position={[rajdhaniPoints[0][0] + 0.15, rajdhaniPoints[0][1] + 0.35, Z_PLANES.UP]}
-        fontSize={0.25}
-        color="#06B6D4"
-        anchorX="left"
-        anchorY="bottom"
-      >
-        RAJDHANI 12424 (UP)
-      </Text>
-
-      {/* 2. Vande Bharat 22436: Orange Neon Ribbon */}
-      <Line
-        points={vandeBharatPoints}
-        color="#F97316"
-        lineWidth={3.5}
-      />
-      <Text
-        position={[vandeBharatPoints[0][0] + 0.15, vandeBharatPoints[0][1] + 0.35, Z_PLANES.UP]}
-        fontSize={0.25}
-        color="#F97316"
-        anchorX="left"
-        anchorY="bottom"
-      >
-        VANDE BHARAT 22436 (UP)
-      </Text>
-
-      {/* 3. BCNHL Freight: Slate/Gray Dashed Line */}
-      <Line
-        points={freightPoints}
-        color="#94A3B8"
-        lineWidth={2.2}
-        dashed
-        dashScale={25}
-        dashSize={0.5}
-        gapSize={0.25}
-      />
-      <Text
-        position={[freightPoints[0][0] + 0.15, freightPoints[0][1] - 0.35, Z_PLANES.DOWN]}
-        fontSize={0.23}
-        color="#94A3B8"
-        anchorX="left"
-        anchorY="top"
-      >
-        BCNHL FREIGHT 41108 (DN)
-      </Text>
-    </group>
-  );
+function PassengerLocoModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-locomotive-passenger-a.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
 }
 
-// ─── Volumetric Maintenance Possession Blocks ───────────────────────────────
-function MaintenancePossessionBlocks() {
-  // Block A-14 (TMS + TDMS Bundled)
-  // Plane: UP Line (Z = -2.5)
-  // Time: 03:00 (180m) to 05:30 (330m)
-  // Range: ALJN (126 km) to TDL (204 km)
-  const blockAX1 = timeToX(180);
-  const blockAX2 = timeToX(330);
-  const blockAY1 = kmToY(126);
-  const blockAY2 = kmToY(204);
-
-  const widthA = Math.abs(blockAX2 - blockAX1);
-  const heightA = Math.abs(blockAY2 - blockAY1);
-  const centerAX = (blockAX1 + blockAX2) / 2;
-  const centerAY = (blockAY1 + blockAY2) / 2;
-
-  // Block B-09 (SMMS Signal Renewal)
-  // Plane: DOWN Line (Z = 0.0)
-  // Time: 04:30 (270m) to 07:30 (450m)
-  // Range: TDL (204 km) to ETW (296 km)
-  const blockBX1 = timeToX(270);
-  const blockBX2 = timeToX(450);
-  const blockBY1 = kmToY(204);
-  const blockBY2 = kmToY(296);
-
-  const widthB = Math.abs(blockBX2 - blockBX1);
-  const heightB = Math.abs(blockBY2 - blockBY1);
-  const centerBX = (blockBX1 + blockBX2) / 2;
-  const centerBY = (blockBY1 + blockBY2) / 2;
-
-  return (
-    <group>
-      {/* ─── Block A-14: Amber Cuboid on UP Line ───────────────────────────── */}
-      <group position={[centerAX, centerAY, Z_PLANES.UP]}>
-        {/* Semi-transparent Physical Glass Mesh */}
-        <mesh>
-          <boxGeometry args={[widthA, heightA, 1.2]} />
-          <meshPhysicalMaterial
-            color="#F59E0B"
-            transmission={0.8}
-            roughness={0.2}
-            transparent
-            opacity={0.45}
-            emissive="#F59E0B"
-            emissiveIntensity={0.25}
-          />
-        </mesh>
-
-        {/* Wireframe Outline */}
-        <lineSegments>
-          <edgesGeometry args={[new THREE.BoxGeometry(widthA, heightA, 1.2)]} />
-          <lineBasicMaterial color="#FBBF24" linewidth={1.5} />
-        </lineSegments>
-
-        {/* Floating 3D Block Metadata Tag */}
-        <Text
-          position={[0, heightA / 2 + 0.28, 0.65]}
-          fontSize={0.26}
-          color="#FDE68A"
-          anchorX="center"
-          anchorY="bottom"
-        >
-          BLOCK A-14 [TMS+TDMS BUNDLE]
-        </Text>
-      </group>
-
-      {/* ─── Block B-09: Emerald Cuboid on DOWN Line ───────────────────────── */}
-      <group position={[centerBX, centerBY, Z_PLANES.DOWN]}>
-        <mesh>
-          <boxGeometry args={[widthB, heightB, 1.2]} />
-          <meshPhysicalMaterial
-            color="#10B981"
-            transmission={0.8}
-            roughness={0.2}
-            transparent
-            opacity={0.45}
-            emissive="#10B981"
-            emissiveIntensity={0.25}
-          />
-        </mesh>
-
-        <lineSegments>
-          <edgesGeometry args={[new THREE.BoxGeometry(widthB, heightB, 1.2)]} />
-          <lineBasicMaterial color="#34D399" linewidth={1.5} />
-        </lineSegments>
-
-        <Text
-          position={[0, heightB / 2 + 0.28, 0.65]}
-          fontSize={0.26}
-          color="#A7F3D0"
-          anchorX="center"
-          anchorY="bottom"
-        >
-          BLOCK B-09 [SMMS SIGNAL]
-        </Text>
-      </group>
-    </group>
-  );
+function PassengerCarriageModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-electric-city-b.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
 }
 
-// ─── Pulsing Conflict Beacon with 3D HTML Callout Tag ────────────────────────
-function ConflictBeacon() {
-  const sphereRef = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
+function DieselLocoModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-diesel-a.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
+}
 
-  // Exact 3D intersection point: Rajdhani enters Block A-14 at KM 184 (03:45)
-  const conflictX = timeToX(225);
-  const conflictY = kmToY(184);
-  const conflictZ = Z_PLANES.UP;
+function ContainerCarriageModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-carriage-container-blue.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
+}
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (sphereRef.current) {
-      const s = 1 + Math.sin(t * 8) * 0.25;
-      sphereRef.current.scale.set(s, s, s);
-    }
-    if (ringRef.current) {
-      const rs = (t * 2) % 2.5;
-      ringRef.current.scale.set(rs, rs, rs);
-      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(
-        0,
-        1 - rs / 2.5
-      );
-    }
-  });
+function CoalCarriageModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.6 }: any) {
+  const { scene } = useGLTF("/models/train-carriage-coal.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
+}
+
+// Track Rail Segment
+function TrackModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.9 }: any) {
+  const { scene } = useGLTF("/models/railroad-straight.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
+}
+
+// Damaged Track (Under Maintenance)
+function DamagedTrackModel({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.9 }: any) {
+  const { scene } = useGLTF("/models/railroad-damaged-straight.glb");
+  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} />;
+}
+
+// ─── Building with Dark Matte Metallic Material Tint ─────────────────────────
+function TintedBuildingModel({
+  url,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1.0,
+}: {
+  url: string;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number | [number, number, number];
+}) {
+  const { scene } = useGLTF(url);
+  const cloned = useMemo(() => {
+    const clone = scene.clone();
+    clone.traverse((child: any) => {
+      if (child.isMesh && child.material) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.material = child.material.clone();
+        // Dark matte navy/slate tint so glowing tracks and trains pop
+        child.material.color.multiplyScalar(0.42);
+        child.material.roughness = 0.72;
+        child.material.metalness = 0.28;
+      }
+    });
+    return clone;
+  }, [scene]);
+
+  return <primitive object={cloned} position={position} rotation={rotation} scale={scale} />;
+}
+
+// ─── Station Hub & Platform Terminals ─────────────────────────────────────────
+function StationHub({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.015 }: any) {
+  const { scene } = useGLTF("/models/station.glb");
+  const cloned = useMemo(() => {
+    const clone = scene.clone();
+    clone.traverse((child: any) => {
+      if (child.isMesh && child.material) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.material = child.material.clone();
+        child.material.color.multiplyScalar(0.55);
+        child.material.roughness = 0.6;
+        child.material.metalness = 0.3;
+      }
+    });
+    return clone;
+  }, [scene]);
 
   return (
-    <group position={[conflictX, conflictY, conflictZ]}>
-      {/* Glowing Red Spherical Beacon */}
-      <mesh ref={sphereRef}>
-        <sphereGeometry args={[0.22, 16, 16]} />
-        <meshBasicMaterial color="#EF4444" />
-      </mesh>
+    <group position={position} rotation={rotation}>
+      <primitive object={cloned} scale={scale} />
 
-      {/* Volumetric Radial Wave Ring */}
-      <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.2, 0.5, 32]} />
-        <meshBasicMaterial color="#EF4444" transparent opacity={0.8} side={THREE.DoubleSide} />
-      </mesh>
+      {/* Subtle Cyan Floodlighting along station facade */}
+      <pointLight color="#06b6d4" intensity={4.5} distance={18} position={[0, 4, 3]} />
+      <pointLight color="#38bdf8" intensity={3.5} distance={15} position={[0, 3, -3]} />
 
-      {/* Point Light Illuminating Surrounding Space */}
-      <pointLight color="#EF4444" intensity={4} distance={6} />
-
-      {/* 3D HTML Interactive Callout Tag */}
-      <Html position={[0.2, 0.4, 0.2]} center distanceFactor={13} zIndexRange={[100, 0]}>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-red-950/90 border border-red-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap animate-pulse select-none">
-          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-          <div className="flex flex-col">
-            <span className="font-mono text-[11px] font-black text-red-200 uppercase tracking-wide">
-              [KM 184] CLASH: TRACK RENEWAL VS RAJDHANI 12424
-            </span>
-            <span className="font-mono text-[10px] text-red-400 font-semibold">
-              CRITICAL HEADWAY VIOLATION • DELAY IMPACT: +42 MIN
-            </span>
-          </div>
+      {/* Floating 3D Station Callout */}
+      <Html position={[0, 7.5, 0]} center distanceFactor={14} zIndexRange={[60, 0]}>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/90 border border-cyan-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[11px]">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+          <span className="font-black text-white tracking-wider uppercase">PRAYAGRAJ JUNCTION (PRYJ)</span>
+          <span className="text-cyan-400 font-bold">• CENTRAL TERMINAL</span>
         </div>
       </Html>
     </group>
   );
 }
 
-// ─── Main 3D String Chart Component ──────────────────────────────────────────
+// ─── Isometric Cityscape Backdrop (GLTF Skyscrapers & Buildings) ─────────────
+function IsometricCityscape() {
+  return (
+    <group>
+      {/* Ground Substrate Base */}
+      <mesh position={[0, -0.28, 0]} receiveShadow>
+        <boxGeometry args={[70, 0.4, 60]} />
+        <meshStandardMaterial color="#07090e" roughness={0.9} metalness={0.1} />
+      </mesh>
+
+      {/* Cyberpunk Glowing Street Grid Network */}
+      <gridHelper args={[64, 42, "#06b6d4", "#131b28"]} position={[0, -0.06, 0]} />
+
+      {/* Glowing Highway & Transit Arteries */}
+      {[-9, 9].map((offsetZ) => (
+        <mesh key={offsetZ} position={[0, -0.04, offsetZ]}>
+          <planeGeometry args={[60, 0.3]} />
+          <meshBasicMaterial color="#0284c7" transparent opacity={0.65} />
+        </mesh>
+      ))}
+
+      {/* ─── Backside City Flank (Z < -7) ─────────────────────────────────── */}
+      {/* Skyscraper Cluster 1 */}
+      <TintedBuildingModel
+        url="/models/building-skyscraper-a.glb"
+        position={[-18, 0, -14]}
+        rotation={[0, Math.PI / 4, 0]}
+        scale={0.9}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-b.glb"
+        position={[-13, 0, -16]}
+        rotation={[0, 0, 0]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-c.glb"
+        position={[-8, 0, -15]}
+        rotation={[0, -Math.PI / 6, 0]}
+        scale={0.9}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-d.glb"
+        position={[8, 0, -15]}
+        rotation={[0, Math.PI / 3, 0]}
+        scale={0.95}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-e.glb"
+        position={[14, 0, -16]}
+        rotation={[0, 0, 0]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-a.glb"
+        position={[19, 0, -14]}
+        rotation={[0, -Math.PI / 4, 0]}
+        scale={0.9}
+      />
+
+      {/* Mid-rise & Commercial Blocks (Back Row) */}
+      <TintedBuildingModel
+        url="/models/building-a.glb"
+        position={[-22, 0, -11]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-d.glb"
+        position={[-16, 0, -9.5]}
+        scale={0.8}
+      />
+      <TintedBuildingModel
+        url="/models/building-f.glb"
+        position={[-11, 0, -10]}
+        scale={0.8}
+      />
+      <TintedBuildingModel
+        url="/models/building-e.glb"
+        position={[11, 0, -10]}
+        scale={0.8}
+      />
+      <TintedBuildingModel
+        url="/models/building-h.glb"
+        position={[16, 0, -9.5]}
+        scale={0.8}
+      />
+      <TintedBuildingModel
+        url="/models/building-j.glb"
+        position={[22, 0, -11]}
+        scale={0.85}
+      />
+
+      {/* ─── Frontside City Flank (Z > +7) ────────────────────────────────── */}
+      {/* Industrial & Commercial Waterfront / Freight Logistics */}
+      <TintedBuildingModel
+        url="/models/building-skyscraper-b.glb"
+        position={[-19, 0, 15]}
+        rotation={[0, Math.PI, 0]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-c.glb"
+        position={[-14, 0, 16]}
+        scale={0.9}
+      />
+      <TintedBuildingModel
+        url="/models/building-f.glb"
+        position={[-8, 0, 12]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-m.glb"
+        position={[0, 0, 13]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-k.glb"
+        position={[8, 0, 12]}
+        scale={0.85}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-d.glb"
+        position={[15, 0, 16]}
+        rotation={[0, Math.PI / 2, 0]}
+        scale={0.9}
+      />
+      <TintedBuildingModel
+        url="/models/building-skyscraper-a.glb"
+        position={[20, 0, 14]}
+        rotation={[0, -Math.PI / 3, 0]}
+        scale={0.85}
+      />
+
+      {/* Low-Lying Atmospheric Miniature Clouds on City Edges */}
+      {[-22, 22].map((cloudX) => (
+        <group key={cloudX} position={[cloudX, 9, -16]}>
+          <mesh>
+            <sphereGeometry args={[5, 16, 16]} />
+            <meshStandardMaterial color="#64748b" transparent opacity={0.15} roughness={1} />
+          </mesh>
+          <mesh position={[2, 1, 3]}>
+            <sphereGeometry args={[4, 16, 16]} />
+            <meshStandardMaterial color="#94a3b8" transparent opacity={0.1} roughness={1} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─── Parallel Railway Corridor Viaduct & Tracks ──────────────────────────────
+function RailwayCorridorTracks() {
+  const trackCount = 28;
+  const spacing = 1.9;
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Ballasted Concrete Viaduct Bed */}
+      <mesh position={[0, 0.05, 0]} receiveShadow>
+        <boxGeometry args={[56, 0.22, 11]} />
+        <meshStandardMaterial color="#0d111a" roughness={0.85} metalness={0.2} />
+      </mesh>
+
+      {/* Viaduct Side Curbs */}
+      <mesh position={[0, 0.22, -5.4]}>
+        <boxGeometry args={[56, 0.35, 0.3]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+      <mesh position={[0, 0.22, 5.4]}>
+        <boxGeometry args={[56, 0.35, 0.3]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+
+      {/* Station Platforms along central stop */}
+      <mesh position={[-2, 0.32, -4.8]} receiveShadow>
+        <boxGeometry args={[14, 0.38, 1.2]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.7} />
+      </mesh>
+      <mesh position={[-2, 0.32, -1.6]} receiveShadow>
+        <boxGeometry args={[14, 0.38, 1.2]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.7} />
+      </mesh>
+
+      {/* Station Platform Canopy Overhangs */}
+      <mesh position={[-2, 1.8, -4.8]}>
+        <boxGeometry args={[13.5, 0.08, 1.4]} />
+        <meshStandardMaterial color="#0284c7" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[-2, 1.8, -1.6]}>
+        <boxGeometry args={[13.5, 0.08, 1.4]} />
+        <meshStandardMaterial color="#0284c7" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* 3 Parallel Track Lines Assembled with GLB Models */}
+      {/* Line 1: UP FAST LINE (Z = -3.2) */}
+      <group position={[0, 0.16, -3.2]}>
+        {Array.from({ length: trackCount }).map((_, i) => {
+          const x = -26 + i * spacing;
+          const isUnderMaintenance = x >= 3 && x <= 11;
+          return isUnderMaintenance ? (
+            <DamagedTrackModel key={`up-${i}`} position={[x, 0, 0]} />
+          ) : (
+            <TrackModel key={`up-${i}`} position={[x, 0, 0]} />
+          );
+        })}
+      </group>
+
+      {/* Line 2: DOWN FAST LINE (Z = 0.0) */}
+      <group position={[0, 0.16, 0]}>
+        {Array.from({ length: trackCount }).map((_, i) => {
+          const x = -26 + i * spacing;
+          return <TrackModel key={`dn-${i}`} position={[x, 0, 0]} />;
+        })}
+      </group>
+
+      {/* Line 3: 3RD / LOOP OVERTAKE LINE (Z = 3.2) */}
+      <group position={[0, 0.16, 3.2]}>
+        {Array.from({ length: trackCount }).map((_, i) => {
+          const x = -26 + i * spacing;
+          const isUnderMaintenance = x >= 14 && x <= 22;
+          return isUnderMaintenance ? (
+            <DamagedTrackModel key={`loop-${i}`} position={[x, 0, 0]} />
+          ) : (
+            <TrackModel key={`loop-${i}`} position={[x, 0, 0]} />
+          );
+        })}
+      </group>
+
+      {/* Track Sector Line Labels along the edge */}
+      <Text
+        position={[-25, 0.45, -4.2]}
+        fontSize={0.45}
+        color="#06b6d4"
+        anchorX="left"
+        anchorY="bottom"
+      >
+        [TRACK 01 // UP FAST EXPRESS LINE]
+      </Text>
+      <Text
+        position={[-25, 0.45, -0.9]}
+        fontSize={0.45}
+        color="#10b981"
+        anchorX="left"
+        anchorY="bottom"
+      >
+        [TRACK 02 // DOWN TRUNK MAINLINE]
+      </Text>
+      <Text
+        position={[-25, 0.45, 2.3]}
+        fontSize={0.45}
+        color="#f59e0b"
+        anchorX="left"
+        anchorY="bottom"
+      >
+        [TRACK 03 // LOOP OVERTAKE & FREIGHT SIDING]
+      </Text>
+    </group>
+  );
+}
+
+// ─── Train Fleets on Dedicated Tracks ────────────────────────────────────────
+function LiveTrainFleet() {
+  const vandeBharatRef = useRef<THREE.Group>(null);
+  const rajdhaniRef = useRef<THREE.Group>(null);
+  const freightRef = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    // 1. Vande Bharat moving on UP Line (Z = -3.2)
+    if (vandeBharatRef.current) {
+      vandeBharatRef.current.position.x += delta * 4.2;
+      if (vandeBharatRef.current.position.x > 26) {
+        vandeBharatRef.current.position.x = -26;
+      }
+    }
+
+    // 2. Rajdhani trailing behind on UP Line (safe headway buffer)
+    if (rajdhaniRef.current) {
+      rajdhaniRef.current.position.x += delta * 3.6;
+      if (rajdhaniRef.current.position.x > 26) {
+        rajdhaniRef.current.position.x = -26;
+      }
+    }
+
+    // 3. Freight Train moving in opposite direction on DOWN Line (Z = 0.0)
+    if (freightRef.current) {
+      freightRef.current.position.x -= delta * 2.8;
+      if (freightRef.current.position.x < -26) {
+        freightRef.current.position.x = 26;
+      }
+    }
+  });
+
+  return (
+    <group>
+      {/* ─── 1. VANDE BHARAT EXPRESS 22436 (UP Line, Lead Sector) ─────────── */}
+      <group ref={vandeBharatRef} position={[14, 0.28, -3.2]}>
+        <BulletTrainModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <BulletCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <BulletCarriageModel position={[-1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+
+        <pointLight color="#38bdf8" intensity={4} distance={6} position={[3.2, 0.5, 0]} />
+
+        <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-cyan-950/90 border border-cyan-400/80 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+            <TrainIcon className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="flex flex-col">
+              <span className="font-bold text-white tracking-wide">22436 VANDE BHARAT EXP</span>
+              <span className="text-cyan-400 font-semibold">130 KM/H • ON-TIME • UP LINE</span>
+            </div>
+          </div>
+        </Html>
+      </group>
+
+      {/* ─── 2. RAJDHANI EXPRESS 12424 (UP Line, Trailing Behind) ──────────── */}
+      <group ref={rajdhaniRef} position={[-14, 0.28, -3.2]}>
+        <PassengerLocoModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <PassengerCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <PassengerCarriageModel position={[-1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+
+        <pointLight color="#06b6d4" intensity={3} distance={5} position={[3.2, 0.5, 0]} />
+
+        <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-950/90 border border-blue-400/80 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+            <TrainIcon className="w-3.5 h-3.5 text-blue-400" />
+            <div className="flex flex-col">
+              <span className="font-bold text-white tracking-wide">12424 RAJDHANI EXP</span>
+              <span className="text-blue-300 font-semibold">120 KM/H • HEADWAY BUFFER: 14M</span>
+            </div>
+          </div>
+        </Html>
+      </group>
+
+      {/* ─── 3. BCNHL HEAVY FREIGHT (DOWN Line, Reverse Direction) ─────────── */}
+      <group ref={freightRef} position={[2, 0.28, 0]}>
+        <DieselLocoModel position={[-3.2, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+        <ContainerCarriageModel position={[-1.6, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+        <CoalCarriageModel position={[0, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+        <ContainerCarriageModel position={[1.6, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+        <CoalCarriageModel position={[3.2, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+
+        <pointLight color="#fbbf24" intensity={3} distance={5} position={[-4.5, 0.5, 0]} />
+
+        <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-zinc-900/90 border border-zinc-600 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+            <TrainIcon className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex flex-col">
+              <span className="font-bold text-white tracking-wide">BCNHL COAL 41108</span>
+              <span className="text-zinc-400 font-semibold">65 KM/H • DN LINE NOMINAL</span>
+            </div>
+          </div>
+        </Html>
+      </group>
+    </group>
+  );
+}
+
+// ─── Physical Maintenance Blocks with Holographic Safety Cages ──────────────
+function InSituMaintenanceBlocks() {
+  const beaconRef = useRef<THREE.PointLight>(null);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (beaconRef.current) {
+      beaconRef.current.intensity = 2.5 + Math.sin(t * 6) * 1.5;
+    }
+  });
+
+  return (
+    <group>
+      {/* ─── Block A-14: Track Renewal & Deep Screening (UP Line, KM 140) ──── */}
+      <group position={[7.0, 0.4, -3.2]}>
+        <mesh>
+          <boxGeometry args={[8, 1.4, 1.6]} />
+          <meshPhysicalMaterial
+            color="#f59e0b"
+            transmission={0.8}
+            roughness={0.2}
+            transparent
+            opacity={0.35}
+            emissive="#f59e0b"
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+
+        <lineSegments>
+          <edgesGeometry args={[new THREE.BoxGeometry(8, 1.4, 1.6)]} />
+          <lineBasicMaterial color="#fbbf24" linewidth={2} />
+        </lineSegments>
+
+        <pointLight ref={beaconRef} color="#f59e0b" intensity={3} distance={8} position={[0, 1.2, 0]} />
+
+        <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-950/90 border border-amber-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] animate-pulse">
+            <Wrench className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-amber-200 uppercase tracking-wide">
+                BLOCK A-14 [TMS BCM DEEP SCREENING]
+              </span>
+              <span className="text-amber-400 font-semibold">
+                KM 126 TO 204 • TSR 30 KM/H • SHADOW TDMS ACTIVE
+              </span>
+            </div>
+          </div>
+        </Html>
+      </group>
+
+      {/* ─── Block B-09: Signal Point Machine Renewal (Loop Line, KM 210) ──── */}
+      <group position={[18.0, 0.4, 3.2]}>
+        <mesh>
+          <boxGeometry args={[8, 1.4, 1.6]} />
+          <meshPhysicalMaterial
+            color="#10b981"
+            transmission={0.8}
+            roughness={0.2}
+            transparent
+            opacity={0.35}
+            emissive="#10b981"
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+
+        <lineSegments>
+          <edgesGeometry args={[new THREE.BoxGeometry(8, 1.4, 1.6)]} />
+          <lineBasicMaterial color="#34d399" linewidth={2} />
+        </lineSegments>
+
+        <pointLight color="#10b981" intensity={2} distance={6} position={[0, 1.2, 0]} />
+
+        <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-950/90 border border-emerald-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+            <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-emerald-200 uppercase tracking-wide">
+                BLOCK B-09 [SMMS POINT MACHINE]
+              </span>
+              <span className="text-emerald-400 font-semibold">
+                INTERLOCKED TURNOUT #44 • OVERTAKE CLEAR
+              </span>
+            </div>
+          </div>
+        </Html>
+      </group>
+    </group>
+  );
+}
+
+// ─── Camera Tilt-Shift & Orbit Controller ────────────────────────────────────
+function CorridorCameraController({ resetTrigger }: { resetTrigger: number }) {
+  const { camera } = useThree();
+  const controlsRef = useRef<any>(null);
+
+  React.useEffect(() => {
+    // Zoomed-in, high-contrast isometric perspective
+    camera.position.set(12, 14, 16);
+    camera.lookAt(0, 0, 0);
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
+    }
+  }, [resetTrigger]);
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      dampingFactor={0.06}
+      maxPolarAngle={Math.PI / 2.15}
+      minPolarAngle={0.1}
+      maxDistance={38}
+      minDistance={7}
+    />
+  );
+}
+
+// ─── Fallback Loader for 3D Assets ───────────────────────────────────────────
+function ModelLoadingFallback() {
+  return (
+    <Html center>
+      <div className="flex items-center gap-3 px-4 py-2 bg-black/80 border border-cyan-500/40 rounded-full font-mono text-xs text-cyan-400 shadow-2xl backdrop-blur-md">
+        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+        <span>LOADING DIGITAL TWIN 3D CORRIDOR &amp; STATION ASSETS...</span>
+      </div>
+    </Html>
+  );
+}
+
+// ─── Main 3D Digital Twin Component ──────────────────────────────────────────
 export const ThreeDStringChart: React.FC = () => {
-  const [is2D, setIs2D] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
   return (
     <Card className="w-full bg-[#050505] border-zinc-800 shadow-2xl overflow-hidden text-white font-sans">
-      {/* Header Bar with Telemetry Badges and Viewport Toggle */}
-      <CardHeader className="p-4 sm:p-5 border-b border-zinc-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950/70">
+      {/* Tactical Header Bar */}
+      <CardHeader className="p-4 sm:p-5 border-b border-zinc-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950/80">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 bg-cyan-400 rotate-45" />
+            <div className="w-2.5 h-2.5 bg-cyan-400 rotate-45 animate-pulse" />
             <CardTitle className="text-base sm:text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
-              <span>3D SPACE-TIME RAIL MATRIX</span>
+              <span>ISOMETRIC 3D DIGITAL TWIN CORRIDOR</span>
               <span className="text-zinc-600 font-normal">//</span>
               <span className="text-cyan-400 font-mono text-xs font-bold">
-                MULTI-PLANE STRING CHART
+                PRAYAGRAJ STATION &amp; CITYSCAPE
               </span>
             </CardTitle>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-400">
             <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-cyan-400 font-mono text-[10px]">
-              NCR-PRYJ DIVISION
+              GZB-CNB 440 KM CORRIDOR
             </Badge>
             <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-emerald-400 font-mono text-[10px]">
-              G&SR 15-MIN HEADWAY
+              STATION.GLB ANCHORED
             </Badge>
             <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-amber-400 font-mono text-[10px]">
-              OR-TOOLS CP-SAT LAYER
+              IN-SITU SHADOW BUNDLE
             </Badge>
           </div>
         </div>
 
-        {/* Interactive Controls & Viewport Toggle */}
+        {/* View Controls */}
         <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIs2D(!is2D)}
-            className="bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 font-mono text-xs font-bold flex items-center gap-2 cursor-pointer transition-all active:scale-95"
-          >
-            {is2D ? (
-              <>
-                <Box className="w-3.5 h-3.5 text-cyan-400" />
-                <span>SWITCH TO 3D ISOMETRIC</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                <span>SWITCH TO 2D ORTHOGRAPHIC</span>
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
             onClick={() => setResetKey((k) => k + 1)}
-            title="Reset Camera Angle"
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800/80 h-8 w-8"
+            className="bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>RESET ISOMETRIC VIEW</span>
           </Button>
         </div>
       </CardHeader>
 
-      {/* Interactive 3D Canvas Viewport */}
-      <CardContent className="p-0 relative w-full h-[580px] bg-[#050505]">
+      {/* 3D WebGL Canvas Viewport */}
+      <CardContent className="p-0 relative w-full h-[620px] bg-[#050505]">
         <Canvas
-          camera={{ position: [12, 10, 15], fov: 45 }}
+          camera={{ position: [12, 14, 16], fov: 42 }}
           gl={{ antialias: true, alpha: false }}
+          shadows
           className="w-full h-full cursor-grab active:cursor-grabbing"
         >
-          {/* Dark Industrial Canvas Background */}
           <color attach="background" args={["#050505"]} />
 
-          {/* Lighting Rig */}
-          <ambientLight color="#06B6D4" intensity={0.9} />
-          <directionalLight position={[10, 15, 10]} intensity={1.8} color="#ffffff" />
-          <directionalLight position={[-10, 5, -10]} intensity={0.8} color="#06B6D4" />
+          {/* Lighting Rig tailored for dark architectural isometric miniatures */}
+          <ambientLight color="#0ea5e9" intensity={0.7} />
+          <directionalLight
+            position={[20, 30, 18]}
+            intensity={2.4}
+            color="#ffffff"
+            castShadow
+            shadow-mapSize={[2048, 2048]}
+          />
+          <directionalLight position={[-18, 12, -14]} intensity={0.8} color="#06b6d4" />
 
-          {/* Orbit Controls with Camera Interpolation */}
-          <CameraController is2D={is2D} resetTrigger={resetKey} />
+          {/* Tilt-Shift Camera Controller */}
+          <CorridorCameraController resetTrigger={resetKey} />
 
-          {/* Parallel Grid Planes (UP, DOWN, LOOP) */}
-          <GridPlanes />
+          <Suspense fallback={<ModelLoadingFallback />}>
+            {/* 1. Procedural Dark City Blocks & GLTF Skyscraper Cityscape */}
+            <IsometricCityscape />
 
-          {/* Glowing 3D Train Trajectories */}
-          <TrainTrajectories />
+            {/* 2. Central Station Hub with Floodlighting */}
+            <StationHub position={[-2, 0.22, -6.8]} rotation={[0, 0, 0]} />
 
-          {/* Volumetric Maintenance Possession Blocks */}
-          <MaintenancePossessionBlocks />
+            {/* 3. Concrete Viaduct with 3 Parallel GLB Tracks & Platforms */}
+            <RailwayCorridorTracks />
 
-          {/* Pulsing Red Conflict Beacon & 3D HTML Tag */}
-          <ConflictBeacon />
+            {/* 4. Live 3D Train Models moving along physical tracks */}
+            <LiveTrainFleet />
+
+            {/* 5. Physical Track Possession Blocks with Holographic Safety Cages */}
+            <InSituMaintenanceBlocks />
+          </Suspense>
         </Canvas>
 
-        {/* On-screen HUD Legend Overlay */}
-        <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-wrap items-center justify-between gap-3 text-[10px] font-mono bg-black/75 backdrop-blur-md border border-zinc-800/90 p-3 rounded">
+        {/* On-Screen HUD Interactive Legend & Control Advice */}
+        <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-wrap items-center justify-between gap-3 text-[10px] font-mono bg-black/80 backdrop-blur-md border border-zinc-800/90 p-3 rounded">
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-zinc-500 font-bold uppercase tracking-wider">LEGEND:</span>
+            <span className="text-zinc-500 font-bold uppercase tracking-wider">CORRIDOR FLEET:</span>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1 bg-[#06B6D4] rounded" />
-              <span className="text-zinc-300">Rajdhani 12424 (UP)</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#38bdf8]" />
+              <span className="text-zinc-300">Vande Bharat 22436 (UP Fast)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1 bg-[#F97316] rounded" />
-              <span className="text-zinc-300">Vande Bharat 22436 (UP)</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#06b6d4]" />
+              <span className="text-zinc-300">Rajdhani 12424 (WAP-7 Lead)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-0.5 border-t border-dashed border-[#94A3B8]" />
-              <span className="text-zinc-300">Freight 41108 (DN)</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#fbbf24]" />
+              <span className="text-zinc-300">BCNHL Freight (DN Mainline)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-amber-500/50 border border-amber-400 rounded-sm" />
-              <span className="text-amber-300">Block A-14 [Bundled]</span>
+              <span className="w-2.5 h-2.5 rounded bg-amber-500/70 border border-amber-400" />
+              <span className="text-amber-300">Block A-14 (UP Damaged Rail)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-emerald-500/50 border border-emerald-400 rounded-sm" />
-              <span className="text-emerald-300">Block B-09 [SMMS]</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              <span className="text-red-400 font-bold">Conflict Beacon</span>
+              <span className="w-2.5 h-2.5 rounded bg-emerald-500/70 border border-emerald-400" />
+              <span className="text-emerald-300">Block B-09 (Turnout #44)</span>
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2 text-zinc-500">
-            <span>DRAG TO ROTATE • SCROLL TO ZOOM • CLICK TOGGLE FOR 2D PROJECTION</span>
+          <div className="hidden lg:flex items-center gap-2 text-zinc-400 font-semibold">
+            <Navigation className="w-3.5 h-3.5 text-cyan-400" />
+            <span>DRAG TO ROTATE TILT-SHIFT • SCROLL TO ZOOM INTO STATION &amp; TRACKS</span>
           </div>
         </div>
       </CardContent>
