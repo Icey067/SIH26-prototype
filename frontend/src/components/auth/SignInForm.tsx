@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowRight, Loader2, KeyRound, UserCheck, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
-
 
 export default function SignInForm() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [authStage, setAuthStage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isFlashing, setIsFlashing] = useState(false);
 
   const handlePresetSelect = (presetId: string) => {
     setSelectedPresetId(presetId);
@@ -22,6 +23,9 @@ export default function SignInForm() {
     if (officer) {
       setEmail(officer.email);
       setPassword("••••••••••••");
+      // Trigger brief 0.4s glowing flash feedback on credential inputs
+      setIsFlashing(true);
+      setTimeout(() => setIsFlashing(false), 400);
     }
   };
 
@@ -38,14 +42,10 @@ export default function SignInForm() {
 
     setErrorMsg(null);
     setIsLoading(true);
-    setAuthStage("Connecting to CRIS Railnet HSM Gateway...");
+    setAuthStage("Authorizing G&SR Token...");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      setAuthStage("Validating Section Authorization & Private Number Authority...");
       await login(email, password, selectedPresetId);
-      setAuthStage("Access Granted! Launching Tactical Console...");
-      await new Promise((resolve) => setTimeout(resolve, 400));
       navigate("/dashboard");
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to authenticate with CRIS server.");
@@ -79,11 +79,18 @@ export default function SignInForm() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
           {presetOfficers.slice(0, 4).map((officer) => (
-            <button
+            <motion.button
               key={officer.id}
               type="button"
               onClick={() => handlePresetSelect(officer.id)}
-              className={`text-left p-2 rounded text-[11px] font-mono transition-all border flex flex-col justify-between ${
+              whileHover={{
+                scale: 1.02,
+                borderColor: "rgba(6, 182, 212, 0.5)",
+                boxShadow: "0 0 16px rgba(6, 182, 212, 0.3)",
+              }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              className={`text-left p-2 rounded text-[11px] font-mono border flex flex-col justify-between cursor-pointer transition-colors ${
                 selectedPresetId === officer.id
                   ? "bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.3)]"
                   : "bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
@@ -91,7 +98,7 @@ export default function SignInForm() {
             >
               <div className="font-bold truncate text-white">{officer.name}</div>
               <div className="text-[9px] text-zinc-500 truncate">{officer.designation}</div>
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -111,7 +118,7 @@ export default function SignInForm() {
             <span>RAILNET EMAIL / EMP ID</span>
             <span className="text-[10px] text-zinc-500">@railnet.gov.in</span>
           </label>
-          <input
+          <motion.input
             type="email"
             required
             value={email}
@@ -119,8 +126,37 @@ export default function SignInForm() {
               setEmail(e.target.value);
               setSelectedPresetId("");
             }}
+            animate={
+              isFlashing
+                ? {
+                    borderColor: [
+                      "rgba(63, 63, 70, 0.8)",
+                      "rgba(6, 182, 212, 1)",
+                      "rgba(6, 182, 212, 1)",
+                      "rgba(63, 63, 70, 0.8)",
+                    ],
+                    boxShadow: [
+                      "0 0 0px rgba(6, 182, 212, 0)",
+                      "0 0 16px rgba(6, 182, 212, 0.6)",
+                      "0 0 16px rgba(6, 182, 212, 0.6)",
+                      "0 0 0px rgba(6, 182, 212, 0)",
+                    ],
+                    backgroundColor: [
+                      "rgba(24, 24, 27, 0.9)",
+                      "rgba(6, 182, 212, 0.15)",
+                      "rgba(6, 182, 212, 0.15)",
+                      "rgba(24, 24, 27, 0.9)",
+                    ],
+                  }
+                : {
+                    borderColor: "rgba(63, 63, 70, 0.8)",
+                    boxShadow: "0 0 0px rgba(6, 182, 212, 0)",
+                    backgroundColor: "rgba(24, 24, 27, 0.9)",
+                  }
+            }
+            transition={{ duration: 0.4, ease: "easeInOut" }}
             placeholder="officer@ncr.railnet.gov.in"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900/90 border border-zinc-700/80 text-white placeholder-zinc-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+            className="w-full px-3.5 py-2.5 rounded-lg border text-white placeholder-zinc-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
           />
         </div>
 
@@ -130,13 +166,42 @@ export default function SignInForm() {
             <span className="text-[10px] text-cyan-400 font-mono">256-Bit Encrypted</span>
           </label>
           <div className="relative">
-            <input
+            <motion.input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              animate={
+                isFlashing
+                  ? {
+                      borderColor: [
+                        "rgba(63, 63, 70, 0.8)",
+                        "rgba(6, 182, 212, 1)",
+                        "rgba(6, 182, 212, 1)",
+                        "rgba(63, 63, 70, 0.8)",
+                      ],
+                      boxShadow: [
+                        "0 0 0px rgba(6, 182, 212, 0)",
+                        "0 0 16px rgba(6, 182, 212, 0.6)",
+                        "0 0 16px rgba(6, 182, 212, 0.6)",
+                        "0 0 0px rgba(6, 182, 212, 0)",
+                      ],
+                      backgroundColor: [
+                        "rgba(24, 24, 27, 0.9)",
+                        "rgba(6, 182, 212, 0.15)",
+                        "rgba(6, 182, 212, 0.15)",
+                        "rgba(24, 24, 27, 0.9)",
+                      ],
+                    }
+                  : {
+                      borderColor: "rgba(63, 63, 70, 0.8)",
+                      boxShadow: "0 0 0px rgba(6, 182, 212, 0)",
+                      backgroundColor: "rgba(24, 24, 27, 0.9)",
+                    }
+              }
+              transition={{ duration: 0.4, ease: "easeInOut" }}
               placeholder="••••••••••••"
-              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900/90 border border-zinc-700/80 text-white placeholder-zinc-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+              className="w-full px-3.5 py-2.5 rounded-lg border text-white placeholder-zinc-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
             />
             <KeyRound className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
@@ -155,24 +220,51 @@ export default function SignInForm() {
           </span>
         </label>
 
-        {/* Submit Button */}
-        <button
+        {/* Submit Button with Beam Sweep, Spring Arrow, and 600ms Loading Transition */}
+        <motion.button
           type="submit"
           disabled={isLoading}
-          className="w-full mt-2 py-3 px-4 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all cursor-pointer disabled:opacity-50"
+          whileHover="hover"
+          whileTap={{ scale: 0.99 }}
+          variants={{
+            hover: { scale: 1.01 },
+          }}
+          className="relative overflow-hidden w-full mt-2 py-3 px-4 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] cursor-pointer disabled:opacity-50"
         >
+          {/* Translucent White/Cyan Sweep Beam (sweeps every 4 seconds) */}
+          <motion.div
+            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 pointer-events-none"
+            animate={{
+              translateX: ["-100%", "250%"],
+            }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              repeatDelay: 2.8,
+              ease: "easeInOut",
+            }}
+          />
+
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>{authStage || "AUTHENTICATING..."}</span>
+              <span>{authStage || "Authorizing G&SR Token..."}</span>
             </>
           ) : (
             <>
               <span>AUTHORIZE &amp; OPEN MISSION CONSOLE</span>
-              <ArrowRight className="w-4 h-4" />
+              <motion.div
+                variants={{
+                  hover: { x: 5 },
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="flex items-center"
+              >
+                <ArrowRight className="w-4 h-4" />
+              </motion.div>
             </>
           )}
-        </button>
+        </motion.button>
       </form>
 
       {/* Switch to SignUp */}
