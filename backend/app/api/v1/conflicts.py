@@ -53,20 +53,24 @@ def get_active_conflicts(db: Session = Depends(get_db)):
         db_blocks = db.query(MaintenanceBlock).all()
         blocks_data = []
         for b in db_blocks:
-            # Convert start_time to minute of day (0 - 1440)
-            st_min = b.start_time.hour * 60 + b.start_time.minute if b.start_time else 480
-            dur = int((b.end_time - b.start_time).total_seconds() / 60) if (b.start_time and b.end_time) else 120
+            st = getattr(b, "time_window_start", None) or getattr(b, "start_time", None)
+            et = getattr(b, "time_window_end", None) or getattr(b, "end_time", None)
+            st_min = st.hour * 60 + st.minute if st else 480
+            dur = getattr(b, "duration_minutes", None) or (int((et - st).total_seconds() / 60) if (st and et) else 120)
+            dept = getattr(b, "primary_department", None) or getattr(b, "department", "TMS")
+            line = getattr(b, "line", None) or getattr(b, "track_line", "UP")
+            mach = getattr(b, "machinery_assigned", None) or getattr(b, "machinery_required", "MANUAL_GANG")
             blocks_data.append({
                 "id": str(b.id),
-                "department": b.department.value if hasattr(b.department, "value") else str(b.department),
+                "department": dept.value if hasattr(dept, "value") else str(dept),
                 "activity_type": "TAMPING",
-                "line_type": b.track_line,
-                "direction": "UP" if "UP" in b.track_line else "DN",
+                "line_type": line,
+                "direction": "UP" if "UP" in str(line) else "DN",
                 "start_km": b.start_km,
                 "end_km": b.end_km,
                 "start_minute": st_min,
                 "duration_minutes": dur,
-                "machinery_deployed": b.machinery_required or "MANUAL_GANG",
+                "machinery_deployed": mach or "MANUAL_GANG",
                 "track_type": "MAIN_LINE",
                 "weather_condition": "CLEAR",
             })

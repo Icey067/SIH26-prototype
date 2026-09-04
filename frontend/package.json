@@ -24,12 +24,9 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
-<<<<<<< HEAD
-=======
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@studio-freight/lenis": "^1.0.42",
->>>>>>> b0b7b58 (feat: Added landing page and fixed dashboard by adding 3D model for block maintainence)
     "@types/three": "^0.185.4",
     "apexcharts": "^4.1.0",
     "axios": "^1.7.9",
