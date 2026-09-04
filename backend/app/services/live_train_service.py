@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import datetime
 from typing import List, Dict, Any, Optional
 import httpx
@@ -18,7 +19,13 @@ MONITORED_TRAINS = [
     {"number": "BTPN-6602", "name": "Petroleum Tanker Freight", "type": "FREIGHT", "priority": 5}
 ]
 
+import time
+
 class LiveTrainService:
+    _cached_feed: Optional[List[Dict[str, Any]]] = None
+    _last_fetch_time: float = 0.0
+    _cache_ttl: float = 12.0 # 12 second live freshness TTL
+
     @classmethod
     async def fetch_live_status(cls, train_number: str) -> Optional[Dict[str, Any]]:
         """
@@ -38,13 +45,13 @@ class LiveTrainService:
         params = {"trainNo": train_number, "startDay": "0"}
 
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=2.0) as client:
                 res = await client.get(url, headers=headers, params=params)
                 if res.status_code == 200:
                     data = res.json()
                     return data
         except Exception as e:
-            logger.warning(f"Could not fetch RapidAPI live status for {train_number}: {e}")
+            logger.debug(f"RapidAPI fetch skipped/timed-out for {train_number}: {e}")
 
         return None
 
@@ -54,13 +61,22 @@ class LiveTrainService:
         Produces live train positions, speeds, delays, and current section occupancy.
         Combines live RapidAPI responses with dynamic corridor kinematics.
         """
+        if cls._cached_feed and (time.time() - cls._last_fetch_time) < cls._cache_ttl:
+            return cls._cached_feed
+
         now = datetime.datetime.now()
         current_minute = now.hour * 60 + now.minute
+
+        # Fetch all live train statuses concurrently in parallel
+        tasks = [
+            cls.fetch_live_status(t["number"]) if not t["number"].startswith("BTPN") else asyncio.sleep(0, result=None)
+            for t in MONITORED_TRAINS
+        ]
+        api_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         live_trains = []
 
         # Stations along Ghaziabad (Km 15) to Tundla (Km 205)
-        # GZB (15km), ALJN / Aligarh (86km), HRS / Hathras (125km), TDL / Tundla (205km)
         corridor_stations = [
             {"code": "GZB", "km": 15.0, "lat": 28.6692, "lng": 77.4538},
             {"code": "KRJ", "km": 50.0, "lat": 28.2500, "lng": 77.7800},
@@ -71,10 +87,7 @@ class LiveTrainService:
 
         for i, train in enumerate(MONITORED_TRAINS):
             num = train["number"]
-            # Check RapidAPI live data first if available
-            api_data = None
-            if not num.startswith("BTPN"):
-                api_data = await cls.fetch_live_status(num)
+            api_data = api_results[i] if i < len(api_results) and isinstance(api_results[i], dict) else None
 
             delay_mins = 0
             curr_station = "ALJN"
@@ -129,4 +142,6 @@ class LiveTrainService:
                 "updated_at": now.isoformat()
             })
 
+        cls._cached_feed = live_trains
+        cls._last_fetch_time = time.time()
         return live_trains

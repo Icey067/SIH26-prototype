@@ -1,17 +1,25 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import httpx
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+import time
+
 class WeatherService:
+    _cached_weather: Optional[Dict[str, Any]] = None
+    _last_weather_fetch: float = 0.0
+    _weather_ttl: float = 30.0 # 30s cache
+
     @classmethod
     async def get_corridor_weather(cls, lat: float = 27.8974, lon: float = 78.0880) -> Dict[str, Any]:
         """
         Fetches live weather from OpenWeatherMap along the railway corridor
         and computes operational track/OHE safety hazard indicators.
         """
+        if cls._cached_weather and (time.time() - cls._last_weather_fetch) < cls._weather_ttl:
+            return cls._cached_weather
         api_key = settings.OPENWEATHER_API_KEY
         ambient_temp_c = 31.0
         humidity = 65
@@ -55,7 +63,7 @@ class WeatherService:
         # OHE Wire Sag & Pantograph Arcing (High wind + extreme heat increases catenary sag)
         ohe_arcing_risk = "ELEVATED" if wind_speed_kmph > 45 or ambient_temp_c > 42 else "NORMAL"
 
-        return {
+        result = {
             "location": "Aligarh - Tundla Rail Corridor (NCR)",
             "latitude": lat,
             "longitude": lon,
@@ -73,3 +81,6 @@ class WeatherService:
                 "ohe_wire_sag_risk": ohe_arcing_risk
             }
         }
+        cls._cached_weather = result
+        cls._last_weather_fetch = time.time()
+        return result

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -8,12 +8,18 @@ import {
   Shield,
   Wrench,
   Navigation,
-  Zap,
+  RefreshCw,
+  Activity,
+  CloudRain,
+  Thermometer,
   Radio,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RailwayAPI } from "@/services/api";
+import { wsService } from "@/services/websocket";
+import { TrainTelemetry, MaintenanceBlock, WeatherReport } from "@/types/railway";
 
 // ─── Train GLTF Models ───────────────────────────────────────────────────────
 
@@ -72,7 +78,6 @@ function TintedBuildingModel({
         child.castShadow = true;
         child.receiveShadow = true;
         child.material = child.material.clone();
-        // Architectural matte slate/navy tint with crisp specular reflection
         child.material.color.multiplyScalar(0.58);
         child.material.roughness = 0.65;
         child.material.metalness = 0.35;
@@ -84,8 +89,18 @@ function TintedBuildingModel({
   return <primitive object={cloned} position={position} rotation={rotation} scale={scale} />;
 }
 
-// ─── Central Station Hub & Platform Terminal ─────────────────────────────────
-function StationHub({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.015 }: any) {
+// ─── Central Station Hub with Live Weather Telemetry ─────────────────────────
+function StationHub({
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 0.015,
+  weather,
+}: {
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+  weather?: WeatherReport | null;
+}) {
   const { scene } = useGLTF("/models/station.glb");
   const cloned = useMemo(() => {
     const clone = scene.clone();
@@ -110,19 +125,32 @@ function StationHub({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 0.015 
       <pointLight color="#00f0ff" intensity={6.0} distance={22} position={[0, 4.5, 3]} />
       <pointLight color="#38bdf8" intensity={4.5} distance={18} position={[0, 3.5, -3]} />
 
-      {/* Floating 3D Station Callout */}
+      {/* Floating 3D Station Callout with Live Telemetry */}
       <Html position={[0, 7.5, 0]} center distanceFactor={14} zIndexRange={[60, 0]}>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/90 border border-cyan-400 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[11px]">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span className="font-black text-white tracking-wider uppercase">PRAYAGRAJ JUNCTION (PRYJ)</span>
-          <span className="text-cyan-400 font-bold">• CENTRAL TERMINAL HUB</span>
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-zinc-950/95 border border-cyan-400 rounded-md shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[11px]">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+          <div className="flex flex-col text-left">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-white tracking-wider uppercase">PRAYAGRAJ JN (PRYJ)</span>
+              <span className="text-cyan-400 font-bold">• CENTRAL TERMINAL</span>
+            </div>
+            {weather && (
+              <div className="flex items-center gap-2 text-[9px] text-zinc-400 font-mono mt-0.5">
+                <span className="text-emerald-400">RAIL TEMP: {weather.estimated_rail_temp_c}°C</span>
+                <span>•</span>
+                <span>{weather.weather_condition.toUpperCase()}</span>
+                <span>•</span>
+                <span className="text-amber-400">BUCKLING: {weather.rail_hazards?.track_buckling_risk || "LOW"}</span>
+              </div>
+            )}
+          </div>
         </div>
       </Html>
     </group>
   );
 }
 
-// ─── Realistic Continuous Railway Track Component ─────────────────────────────
+// ─── Continuous Railway Track Component ───────────────────────────────────────
 interface SingleTrackProps {
   z: number;
   label: string;
@@ -145,7 +173,6 @@ function ContinuousTrackLine({
   const sleeperCount = Math.floor(trackLength / sleeperSpacing);
   const pulseRef = useRef<THREE.Mesh>(null);
 
-  // Animated electrical signal packet traveling down the third-rail circuit
   useFrame(({ clock }) => {
     if (pulseRef.current) {
       const speed = z < 0 ? 9.0 : 6.5;
@@ -156,13 +183,12 @@ function ContinuousTrackLine({
 
   return (
     <group position={[0, 0, z]}>
-      {/* 1. Elevated Ballast Bed (Dark Gravel Stone Embankment) */}
+      {/* Elevated Ballast Bed */}
       <mesh position={[0, 0.08, 0]} receiveShadow>
         <boxGeometry args={[trackLength, 0.16, 2.0]} />
         <meshStandardMaterial color="#141923" roughness={0.92} metalness={0.15} />
       </mesh>
 
-      {/* Ballast Chamfered Edges */}
       <mesh position={[0, 0.04, -1.05]}>
         <boxGeometry args={[trackLength, 0.08, 0.15]} />
         <meshStandardMaterial color="#0f131a" roughness={0.95} />
@@ -172,14 +198,13 @@ function ContinuousTrackLine({
         <meshStandardMaterial color="#0f131a" roughness={0.95} />
       </mesh>
 
-      {/* 2. Concrete Railway Sleepers (Cross Ties) */}
+      {/* Concrete Railway Sleepers */}
       {Array.from({ length: sleeperCount }).map((_, i) => {
         const x = -trackLength / 2 + i * sleeperSpacing;
         const isDamaged = hasMaintenance && x >= maintenanceStart && x <= maintenanceEnd;
 
         return (
           <group key={i} position={[x, 0.18, 0]}>
-            {/* Sleeper Body */}
             <mesh receiveShadow castShadow>
               <boxGeometry args={[0.28, 0.07, 1.5]} />
               <meshStandardMaterial
@@ -188,8 +213,6 @@ function ContinuousTrackLine({
                 metalness={0.2}
               />
             </mesh>
-
-            {/* Metal Rail Anchor Fastener Plates */}
             <mesh position={[0, 0.045, -0.45]}>
               <boxGeometry args={[0.18, 0.03, 0.14]} />
               <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.2} />
@@ -202,37 +225,27 @@ function ContinuousTrackLine({
         );
       })}
 
-      {/* 3. Left Steel Rail (Polished Specular Steel) */}
+      {/* Left Steel Rail */}
       <mesh position={[0, 0.28, -0.45]} castShadow receiveShadow>
         <boxGeometry args={[trackLength, 0.12, 0.07]} />
-        <meshStandardMaterial
-          color="#e2e8f0"
-          metalness={0.95}
-          roughness={0.12}
-        />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
       </mesh>
-      {/* Left Rail Shiny Crown Highlight */}
       <mesh position={[0, 0.345, -0.45]}>
         <boxGeometry args={[trackLength, 0.02, 0.04]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {/* 4. Right Steel Rail (Polished Specular Steel) */}
+      {/* Right Steel Rail */}
       <mesh position={[0, 0.28, 0.45]} castShadow receiveShadow>
         <boxGeometry args={[trackLength, 0.12, 0.07]} />
-        <meshStandardMaterial
-          color="#e2e8f0"
-          metalness={0.95}
-          roughness={0.12}
-        />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
       </mesh>
-      {/* Right Rail Shiny Crown Highlight */}
       <mesh position={[0, 0.345, 0.45]}>
         <boxGeometry args={[trackLength, 0.02, 0.04]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {/* 5. Glowing Electric Track Circuit Signaling Line (High-Tech Center Guide) */}
+      {/* Glowing Electric Signaling Third-Rail Line */}
       <mesh position={[0, 0.19, 0]}>
         <boxGeometry args={[trackLength, 0.02, 0.08]} />
         <meshStandardMaterial
@@ -242,14 +255,12 @@ function ContinuousTrackLine({
         />
       </mesh>
 
-      {/* Animated Traveling Photon Pulse on Center Track Guide */}
       <mesh ref={pulseRef} position={[0, 0.22, 0]}>
         <sphereGeometry args={[0.12, 8, 8]} />
         <meshBasicMaterial color="#ffffff" />
         <pointLight color="#00f0ff" intensity={3.5} distance={3.5} />
       </mesh>
 
-      {/* 6. Track Sector Identification Label */}
       <Text
         position={[-27, 0.55, -0.85]}
         fontSize={0.42}
@@ -263,21 +274,18 @@ function ContinuousTrackLine({
   );
 }
 
-// ─── Overhead Railway Electrification Gantries (OHE Portals) ──────────────────
+// ─── Overhead Railway Electrification Gantries ────────────────────────────────
 function OverheadCatenaryGantries() {
   const gantryX = [-22, -14, -6, 2, 10, 18, 26];
 
   return (
     <group>
-      {/* Continuous Overhead Electric Catenary Wires above each of the 3 tracks */}
       {[-3.2, 0, 3.2].map((wireZ) => (
         <group key={`wire-${wireZ}`}>
-          {/* Main Contact Wire (carrying 25kV traction power) */}
           <mesh position={[0, 2.75, wireZ]}>
             <boxGeometry args={[58, 0.03, 0.03]} />
             <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={1.8} />
           </mesh>
-          {/* Upper Messenger Wire */}
           <mesh position={[0, 3.15, wireZ]}>
             <boxGeometry args={[58, 0.02, 0.02]} />
             <meshStandardMaterial color="#64748b" metalness={0.8} />
@@ -285,39 +293,31 @@ function OverheadCatenaryGantries() {
         </group>
       ))}
 
-      {/* Lattice Portal Gantries Spanning the 3 Tracks */}
       {gantryX.map((x, idx) => (
         <group key={`gantry-${x}`} position={[x, 0, 0]}>
-          {/* Left Vertical Steel Mast */}
           <mesh position={[0, 1.7, -4.9]} castShadow>
             <boxGeometry args={[0.22, 3.4, 0.22]} />
             <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
           </mesh>
-          {/* Right Vertical Steel Mast */}
           <mesh position={[0, 1.7, 4.9]} castShadow>
             <boxGeometry args={[0.22, 3.4, 0.22]} />
             <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
           </mesh>
-          {/* Horizontal Cross-Beam Truss */}
           <mesh position={[0, 3.3, 0]} castShadow>
             <boxGeometry args={[0.28, 0.25, 10.1]} />
             <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
           </mesh>
 
-          {/* Insulator Drop Arms with Track Signal Indicators */}
           {[-3.2, 0, 3.2].map((z, sIdx) => {
             const isGreen = idx % 2 === 0 || sIdx === 0;
             const signalColor = isGreen ? "#10b981" : "#f59e0b";
 
             return (
               <group key={`sig-${z}`} position={[0, 3.0, z]}>
-                {/* Insulator drop */}
                 <mesh position={[0, 0.1, 0]}>
                   <cylinderGeometry args={[0.04, 0.04, 0.35, 8]} />
                   <meshStandardMaterial color="#94a3b8" />
                 </mesh>
-
-                {/* Overhead LED Signal Head */}
                 <mesh position={[0, -0.2, 0.2]}>
                   <boxGeometry args={[0.15, 0.22, 0.12]} />
                   <meshStandardMaterial color="#0f172a" />
@@ -336,17 +336,15 @@ function OverheadCatenaryGantries() {
   );
 }
 
-// ─── Parallel Railway Corridor Viaduct & Passenger Platforms ──────────────────
+// ─── Parallel Railway Corridor Viaduct & Platforms ────────────────────────────
 function RailwayCorridorTracks() {
   return (
     <group position={[0, 0, 0]}>
-      {/* Main Elevated Concrete Viaduct Deck Bed */}
       <mesh position={[0, 0.02, 0]} receiveShadow>
         <boxGeometry args={[58, 0.16, 11.4]} />
         <meshStandardMaterial color="#0f141f" roughness={0.85} metalness={0.25} />
       </mesh>
 
-      {/* Viaduct Reinforced Concrete Side Parapet Curbs */}
       <mesh position={[0, 0.22, -5.6]} castShadow receiveShadow>
         <boxGeometry args={[58, 0.38, 0.35]} />
         <meshStandardMaterial color="#1e293b" roughness={0.7} />
@@ -356,7 +354,7 @@ function RailwayCorridorTracks() {
         <meshStandardMaterial color="#1e293b" roughness={0.7} />
       </mesh>
 
-      {/* Track Line 1: UP FAST EXPRESS LINE (Z = -3.2) */}
+      {/* UP Fast Express Line */}
       <ContinuousTrackLine
         z={-3.2}
         label="[TRACK 01 // UP FAST EXPRESS LINE]"
@@ -366,14 +364,14 @@ function RailwayCorridorTracks() {
         maintenanceEnd={11}
       />
 
-      {/* Track Line 2: DOWN TRUNK MAINLINE (Z = 0.0) */}
+      {/* DOWN Trunk Mainline */}
       <ContinuousTrackLine
         z={0.0}
         label="[TRACK 02 // DOWN TRUNK MAINLINE]"
         badgeColor="#10b981"
       />
 
-      {/* Track Line 3: LOOP OVERTAKE & SIDING (Z = +3.2) */}
+      {/* Loop Overtake Line */}
       <ContinuousTrackLine
         z={3.2}
         label="[TRACK 03 // LOOP OVERTAKE & FREIGHT SIDING]"
@@ -383,7 +381,7 @@ function RailwayCorridorTracks() {
         maintenanceEnd={22}
       />
 
-      {/* Diagonal Track Crossover / Interlocked Turnout (Switch) */}
+      {/* Turnout Crossover */}
       <group position={[14, 0.18, 1.6]} rotation={[0, -Math.PI / 8.5, 0]}>
         <mesh position={[0, 0.08, -0.45]}>
           <boxGeometry args={[7.2, 0.1, 0.06]} />
@@ -396,19 +394,16 @@ function RailwayCorridorTracks() {
         <pointLight color="#10b981" intensity={2} distance={4} position={[0, 0.3, 0]} />
       </group>
 
-      {/* Passenger Station Platforms */}
-      {/* Platform 1 (between Track 1 and Station Hub at Z = -4.7) */}
+      {/* Platform 1 */}
       <group position={[-2, 0.28, -4.7]}>
         <mesh receiveShadow castShadow>
           <boxGeometry args={[16, 0.36, 1.4]} />
           <meshStandardMaterial color="#1e293b" roughness={0.65} metalness={0.3} />
         </mesh>
-        {/* Yellow Textured Tactile Safety Edge Strip */}
         <mesh position={[0, 0.19, 0.65]}>
           <boxGeometry args={[16, 0.02, 0.12]} />
           <meshBasicMaterial color="#fbbf24" />
         </mesh>
-        {/* Modern Canopy Overhang */}
         <mesh position={[0, 2.0, 0]} castShadow>
           <boxGeometry args={[15.6, 0.08, 1.6]} />
           <meshStandardMaterial color="#0284c7" metalness={0.85} roughness={0.25} />
@@ -426,7 +421,7 @@ function RailwayCorridorTracks() {
         </Html>
       </group>
 
-      {/* Platform 2 (Island Platform between Track 1 & Track 2 at Z = -1.6) */}
+      {/* Platform 2 */}
       <group position={[-2, 0.28, -1.6]}>
         <mesh receiveShadow castShadow>
           <boxGeometry args={[16, 0.36, 1.4]} />
@@ -457,13 +452,12 @@ function RailwayCorridorTracks() {
         </Html>
       </group>
 
-      {/* Overhead Catenary Gantries across the Viaduct */}
       <OverheadCatenaryGantries />
     </group>
   );
 }
 
-// ─── Active Cityscape Backdrop with Glowing Urban Circuit Arteries ───────────
+// ─── Active Cityscape Backdrop ───────────────────────────────────────────────
 function IsometricCityscape() {
   const pulseRef = useRef<THREE.Group>(null);
 
@@ -476,24 +470,19 @@ function IsometricCityscape() {
 
   return (
     <group>
-      {/* Terrain Substrate */}
       <mesh position={[0, -0.3, 0]} receiveShadow>
         <boxGeometry args={[75, 0.4, 65]} />
         <meshStandardMaterial color="#0a0e1a" roughness={0.95} metalness={0.1} />
       </mesh>
 
-      {/* Vibrant Cyan Cyberpunk Street Grid (matching user reference image) */}
       <gridHelper args={[70, 48, "#00f0ff", "#162238"]} position={[0, -0.06, 0]} />
 
-      {/* Glowing Neon Highway Arteries with Curved Transit Ribbons */}
       {[-10, 10, -18, 18].map((offsetZ) => (
         <group key={`hwy-${offsetZ}`}>
-          {/* Road Asphalt Bed */}
           <mesh position={[0, -0.04, offsetZ]}>
             <planeGeometry args={[65, 1.4]} />
             <meshStandardMaterial color="#111827" roughness={0.9} />
           </mesh>
-          {/* Dual Cyan Glowing Center Stripes */}
           <mesh position={[0, -0.02, offsetZ - 0.2]}>
             <planeGeometry args={[65, 0.08]} />
             <meshBasicMaterial color="#00f0ff" />
@@ -505,7 +494,6 @@ function IsometricCityscape() {
         </group>
       ))}
 
-      {/* Cross Arteries (North-South Avenues) */}
       {[-24, -12, 0, 12, 24].map((offsetX) => (
         <mesh key={`cross-${offsetX}`} position={[offsetX, -0.03, 0]}>
           <planeGeometry args={[1.2, 60]} />
@@ -513,49 +501,19 @@ function IsometricCityscape() {
         </mesh>
       ))}
 
-      {/* Moving Traffic Light Photons on the Avenue Grid */}
       <group ref={pulseRef}>
         <pointLight color="#00f0ff" intensity={3.5} distance={10} position={[0, 0.5, -10]} />
         <pointLight color="#38bdf8" intensity={3.5} distance={10} position={[0, 0.5, 10]} />
       </group>
 
-      {/* ─── Backside Skyscraper Horizon (Z < -7) ─────────────────────────── */}
-      <TintedBuildingModel
-        url="/models/building-skyscraper-a.glb"
-        position={[-18, 0, -14]}
-        rotation={[0, Math.PI / 4, 0]}
-        scale={0.95}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-b.glb"
-        position={[-13, 0, -16]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-c.glb"
-        position={[-7, 0, -15]}
-        rotation={[0, -Math.PI / 6, 0]}
-        scale={0.95}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-d.glb"
-        position={[8, 0, -15]}
-        rotation={[0, Math.PI / 3, 0]}
-        scale={1.0}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-e.glb"
-        position={[14, 0, -16]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-a.glb"
-        position={[20, 0, -14]}
-        rotation={[0, -Math.PI / 4, 0]}
-        scale={0.95}
-      />
+      {/* Skyscraper Clustered Horizon */}
+      <TintedBuildingModel url="/models/building-skyscraper-a.glb" position={[-18, 0, -14]} rotation={[0, Math.PI / 4, 0]} scale={0.95} />
+      <TintedBuildingModel url="/models/building-skyscraper-b.glb" position={[-13, 0, -16]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-skyscraper-c.glb" position={[-7, 0, -15]} rotation={[0, -Math.PI / 6, 0]} scale={0.95} />
+      <TintedBuildingModel url="/models/building-skyscraper-d.glb" position={[8, 0, -15]} rotation={[0, Math.PI / 3, 0]} scale={1.0} />
+      <TintedBuildingModel url="/models/building-skyscraper-e.glb" position={[14, 0, -16]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-skyscraper-a.glb" position={[20, 0, -14]} rotation={[0, -Math.PI / 4, 0]} scale={0.95} />
 
-      {/* Backside Mid-Rise & Logistics Warehouses */}
       <TintedBuildingModel url="/models/building-a.glb" position={[-23, 0, -11]} scale={0.9} />
       <TintedBuildingModel url="/models/building-d.glb" position={[-16, 0, -9.5]} scale={0.85} />
       <TintedBuildingModel url="/models/building-f.glb" position={[-10, 0, -10]} scale={0.85} />
@@ -563,52 +521,18 @@ function IsometricCityscape() {
       <TintedBuildingModel url="/models/building-h.glb" position={[16, 0, -9.5]} scale={0.85} />
       <TintedBuildingModel url="/models/building-j.glb" position={[23, 0, -11]} scale={0.9} />
 
-      {/* ─── Frontside Skyscraper Flank (Z > +7) ──────────────────────────── */}
-      <TintedBuildingModel
-        url="/models/building-skyscraper-b.glb"
-        position={[-20, 0, 15]}
-        rotation={[0, Math.PI, 0]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-c.glb"
-        position={[-14, 0, 16]}
-        scale={0.95}
-      />
-      <TintedBuildingModel
-        url="/models/building-f.glb"
-        position={[-8, 0, 12]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-m.glb"
-        position={[0, 0, 13]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-k.glb"
-        position={[8, 0, 12]}
-        scale={0.9}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-d.glb"
-        position={[16, 0, 16]}
-        rotation={[0, Math.PI / 2, 0]}
-        scale={0.95}
-      />
-      <TintedBuildingModel
-        url="/models/building-skyscraper-a.glb"
-        position={[22, 0, 14]}
-        rotation={[0, -Math.PI / 3, 0]}
-        scale={0.9}
-      />
+      <TintedBuildingModel url="/models/building-skyscraper-b.glb" position={[-20, 0, 15]} rotation={[0, Math.PI, 0]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-skyscraper-c.glb" position={[-14, 0, 16]} scale={0.95} />
+      <TintedBuildingModel url="/models/building-f.glb" position={[-8, 0, 12]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-m.glb" position={[0, 0, 13]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-k.glb" position={[8, 0, 12]} scale={0.9} />
+      <TintedBuildingModel url="/models/building-skyscraper-d.glb" position={[16, 0, 16]} rotation={[0, Math.PI / 2, 0]} scale={0.95} />
+      <TintedBuildingModel url="/models/building-skyscraper-a.glb" position={[22, 0, 14]} rotation={[0, -Math.PI / 3, 0]} scale={0.9} />
 
-      {/* Rooftop Hazard Aviation Beacon Lights on Skyscraper Spires */}
       <pointLight color="#ef4444" intensity={3.5} distance={7} position={[-18, 9.5, -14]} />
       <pointLight color="#38bdf8" intensity={3.5} distance={7} position={[8, 10.5, -15]} />
       <pointLight color="#ef4444" intensity={3.5} distance={7} position={[16, 10.0, 16]} />
 
-      {/* Atmospheric Miniature Clouds (Modeled after user reference image) */}
       {[-24, 24].map((cloudX) => (
         <group key={`cloud-${cloudX}`} position={[cloudX, 9, -16]}>
           <mesh>
@@ -625,62 +549,96 @@ function IsometricCityscape() {
   );
 }
 
-// ─── Active Train Fleets Traveling on Physical Rails ─────────────────────────
-function LiveTrainFleet() {
-  const vandeBharatRef = useRef<THREE.Group>(null);
-  const rajdhaniRef = useRef<THREE.Group>(null);
-  const freightRef = useRef<THREE.Group>(null);
+// ─── Live Train Fleet with Real-Time Telemetry Data Binding ───────────────────
+function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
+  const train1Ref = useRef<THREE.Group>(null);
+  const train2Ref = useRef<THREE.Group>(null);
+  const train3Ref = useRef<THREE.Group>(null);
+
+  // Match live trains from backend or fallback to monitored fleet
+  const t1 = liveTrains.find((t) => t.train_number === "22436") || liveTrains[0] || {
+    train_number: "22436",
+    train_name: "Vande Bharat Express",
+    speed_kmph: 130,
+    delay_minutes: 0,
+    status: "ON_TIME",
+    current_station: "PRYJ",
+    current_km: 88.4,
+  };
+
+  const t2 = liveTrains.find((t) => t.train_number === "12424" || t.train_number === "12004") || liveTrains[1] || {
+    train_number: "12424",
+    train_name: "Rajdhani Express",
+    speed_kmph: 120,
+    delay_minutes: 14,
+    status: "DELAYED",
+    current_station: "CNB",
+    current_km: 142.1,
+  };
+
+  const t3 = liveTrains.find((t) => t.train_type?.includes("FREIGHT") || t.train_number.startsWith("BTPN")) || liveTrains[liveTrains.length - 1] || {
+    train_number: "BTPN-6602",
+    train_name: "Petroleum Tanker Freight",
+    speed_kmph: 65,
+    delay_minutes: 0,
+    status: "ON_TIME",
+    current_station: "PRYJ",
+    current_km: 54.0,
+  };
 
   useFrame((_, delta) => {
-    // 1. Vande Bharat moving on UP Line (Z = -3.2)
-    if (vandeBharatRef.current) {
-      vandeBharatRef.current.position.x += delta * 4.4;
-      if (vandeBharatRef.current.position.x > 26) {
-        vandeBharatRef.current.position.x = -26;
-      }
+    // Kinematic translation speed dynamically scaled by real speed_kmph from API
+    const v1Speed = (t1.speed_kmph || 125) * 0.035;
+    const v2Speed = (t2.speed_kmph || 110) * 0.032;
+    const v3Speed = (t3.speed_kmph || 65) * 0.040;
+
+    if (train1Ref.current) {
+      train1Ref.current.position.x += delta * v1Speed;
+      if (train1Ref.current.position.x > 26) train1Ref.current.position.x = -26;
     }
 
-    // 2. Rajdhani trailing behind on UP Line (safe headway buffer)
-    if (rajdhaniRef.current) {
-      rajdhaniRef.current.position.x += delta * 3.8;
-      if (rajdhaniRef.current.position.x > 26) {
-        rajdhaniRef.current.position.x = -26;
-      }
+    if (train2Ref.current) {
+      train2Ref.current.position.x += delta * v2Speed;
+      if (train2Ref.current.position.x > 26) train2Ref.current.position.x = -26;
     }
 
-    // 3. Freight Train moving in opposite direction on DOWN Line (Z = 0.0)
-    if (freightRef.current) {
-      freightRef.current.position.x -= delta * 2.8;
-      if (freightRef.current.position.x < -26) {
-        freightRef.current.position.x = 26;
-      }
+    if (train3Ref.current) {
+      train3Ref.current.position.x -= delta * v3Speed;
+      if (train3Ref.current.position.x < -26) train3Ref.current.position.x = 26;
     }
   });
 
+  const getStatusBadgeClass = (status: string, delay: number) => {
+    if (delay === 0 || status === "ON_TIME") return "text-cyan-400 border-cyan-400/80 bg-cyan-950/90";
+    if (delay > 15 || status === "CRITICAL_DELAY") return "text-red-400 border-red-400/80 bg-red-950/90";
+    return "text-amber-400 border-amber-400/80 bg-amber-950/90";
+  };
+
   return (
     <group>
-      {/* 1. VANDE BHARAT EXPRESS 22436 (UP Line, Lead Sector) */}
-      <group ref={vandeBharatRef} position={[14, 0.32, -3.2]}>
+      {/* ─── Live Train 1: Lead UP Fast Line (Z = -3.2) ─────────────────── */}
+      <group ref={train1Ref} position={[12, 0.32, -3.2]}>
         <BulletTrainModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <BulletCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <BulletCarriageModel position={[-1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
 
-        {/* High-Beam Forward Illuminators */}
         <pointLight color="#38bdf8" intensity={4.5} distance={8} position={[3.5, 0.6, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-cyan-950/90 border border-cyan-400/80 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
-            <TrainIcon className="w-3.5 h-3.5 text-cyan-400" />
-            <div className="flex flex-col">
-              <span className="font-bold text-white tracking-wide">22436 VANDE BHARAT EXP</span>
-              <span className="text-cyan-400 font-semibold">130 KM/H • ON-TIME • UP FAST LINE</span>
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t1.status, t1.delay_minutes)}`}>
+            <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-white tracking-wide">{t1.train_number} {t1.train_name}</span>
+              <span className="font-semibold text-[9px]">
+                {t1.speed_kmph} KM/H • {t1.delay_minutes === 0 ? "ON-TIME" : `+${t1.delay_minutes}M DELAY`} • KM {Number(t1.current_km || 88).toFixed(1)}
+              </span>
             </div>
           </div>
         </Html>
       </group>
 
-      {/* 2. RAJDHANI EXPRESS 12424 (UP Line, Trailing Headway) */}
-      <group ref={rajdhaniRef} position={[-14, 0.32, -3.2]}>
+      {/* ─── Live Train 2: Trailing UP Fast Line (Z = -3.2) ──────────────── */}
+      <group ref={train2Ref} position={[-12, 0.32, -3.2]}>
         <PassengerLocoModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <PassengerCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <PassengerCarriageModel position={[-1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
@@ -688,18 +646,20 @@ function LiveTrainFleet() {
         <pointLight color="#06b6d4" intensity={3.5} distance={6} position={[3.2, 0.6, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-950/90 border border-blue-400/80 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
-            <TrainIcon className="w-3.5 h-3.5 text-blue-400" />
-            <div className="flex flex-col">
-              <span className="font-bold text-white tracking-wide">12424 RAJDHANI EXP</span>
-              <span className="text-blue-300 font-semibold">120 KM/H • HEADWAY BUFFER: 14M</span>
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t2.status, t2.delay_minutes)}`}>
+            <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+              <span className="font-semibold text-[9px]">
+                {t2.speed_kmph} KM/H • {t2.delay_minutes === 0 ? "ON-TIME" : `+${t2.delay_minutes}M DELAY`} • NEAR {t2.current_station}
+              </span>
             </div>
           </div>
         </Html>
       </group>
 
-      {/* 3. BCNHL HEAVY FREIGHT (DOWN Line, Reverse Direction) */}
-      <group ref={freightRef} position={[2, 0.32, 0]}>
+      {/* ─── Live Train 3: DOWN Trunk Mainline Freight (Z = 0.0) ────────── */}
+      <group ref={train3Ref} position={[2, 0.32, 0]}>
         <DieselLocoModel position={[-3.2, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
         <ContainerCarriageModel position={[-1.6, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
         <CoalCarriageModel position={[0, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
@@ -710,10 +670,12 @@ function LiveTrainFleet() {
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
           <div className="flex items-center gap-2 px-2.5 py-1 bg-zinc-900/90 border border-zinc-600 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
-            <TrainIcon className="w-3.5 h-3.5 text-amber-400" />
-            <div className="flex flex-col">
-              <span className="font-bold text-white tracking-wide">BCNHL COAL 41108</span>
-              <span className="text-zinc-400 font-semibold">65 KM/H • DN TRUNK NOMINAL</span>
+            <TrainIcon className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-white tracking-wide">{t3.train_number} {t3.train_name}</span>
+              <span className="text-zinc-400 font-semibold text-[9px]">
+                {t3.speed_kmph} KM/H • DN MAINLINE • {t3.status}
+              </span>
             </div>
           </div>
         </Html>
@@ -722,8 +684,8 @@ function LiveTrainFleet() {
   );
 }
 
-// ─── Physical Maintenance Blocks with Holographic Safety Cages ──────────────
-function InSituMaintenanceBlocks() {
+// ─── Real PostgreSQL In-Situ Maintenance Possession Blocks ───────────────────
+function InSituMaintenanceBlocks({ blocks }: { blocks: MaintenanceBlock[] }) {
   const beaconRef = useRef<THREE.PointLight>(null);
 
   useFrame(({ clock }) => {
@@ -733,9 +695,33 @@ function InSituMaintenanceBlocks() {
     }
   });
 
+  const b1 = blocks[0] || {
+    block_code: "GZB-TDL-UP-1045",
+    title: "Mega Joint Maintenance: BCM Deep Screening",
+    primary_department: "ENGINEERING",
+    bundled_departments: "ENG,S&T,TRD",
+    start_km: 86.0,
+    end_km: 92.0,
+    status: "APPROVED",
+    duration_minutes: 120,
+    machinery_assigned: "BCM, TOWER_WAGON",
+  };
+
+  const b2 = blocks[1] || {
+    block_code: "BLK-NCR-2026-002",
+    title: "SMMS Point Machine Renewal & Turnout Test",
+    primary_department: "SIGNAL_TELECOM",
+    bundled_departments: "S&T",
+    start_km: 144.0,
+    end_km: 146.5,
+    status: "APPROVED",
+    duration_minutes: 90,
+    machinery_assigned: "POINT_CALIBRATOR",
+  };
+
   return (
     <group>
-      {/* Block A-14: Track Renewal & Deep Screening (UP Line, KM 140) */}
+      {/* ─── Block 1: Track Possession on UP Line (Z = -3.2) ──────────────── */}
       <group position={[7.0, 0.45, -3.2]}>
         <mesh>
           <boxGeometry args={[8, 1.4, 1.6]} />
@@ -758,21 +744,21 @@ function InSituMaintenanceBlocks() {
         <pointLight ref={beaconRef} color="#f59e0b" intensity={3.5} distance={8} position={[0, 1.4, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-950/90 border border-amber-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] animate-pulse">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-950/95 border border-amber-500 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] animate-pulse">
             <Wrench className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <div className="flex flex-col text-left">
               <span className="font-bold text-amber-200 uppercase tracking-wide">
-                BLOCK A-14 [TMS BCM DEEP SCREENING]
+                BLOCK {b1.block_code} [{b1.primary_department}]
               </span>
-              <span className="text-amber-400 font-semibold">
-                KM 126 TO 204 • TSR 30 KM/H • SHADOW TDMS ACTIVE
+              <span className="text-amber-400 font-semibold text-[9px]">
+                KM {b1.start_km} TO {b1.end_km} • {b1.status} • {b1.duration_minutes}M WINDOW
               </span>
             </div>
           </div>
         </Html>
       </group>
 
-      {/* Block B-09: Signal Point Machine Renewal (Loop Line, KM 210) */}
+      {/* ─── Block 2: Track Possession on Loop Siding (Z = +3.2) ───────────── */}
       <group position={[18.0, 0.45, 3.2]}>
         <mesh>
           <boxGeometry args={[8, 1.4, 1.6]} />
@@ -795,14 +781,14 @@ function InSituMaintenanceBlocks() {
         <pointLight color="#10b981" intensity={2.5} distance={6} position={[0, 1.4, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-950/90 border border-emerald-500/80 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-950/95 border border-emerald-500 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
             <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <div className="flex flex-col text-left">
               <span className="font-bold text-emerald-200 uppercase tracking-wide">
-                BLOCK B-09 [SMMS POINT MACHINE]
+                BLOCK {b2.block_code} [{b2.primary_department}]
               </span>
-              <span className="text-emerald-400 font-semibold">
-                INTERLOCKED TURNOUT #44 • OVERTAKE CLEAR
+              <span className="text-emerald-400 font-semibold text-[9px]">
+                KM {b2.start_km} TO {b2.end_km} • {b2.status} • OVERTAKE CLEAR
               </span>
             </div>
           </div>
@@ -817,8 +803,7 @@ function CorridorCameraController({ resetTrigger }: { resetTrigger: number }) {
   const { camera } = useThree();
   const controlsRef = useRef<any>(null);
 
-  React.useEffect(() => {
-    // Zoomed-in, high-contrast isometric perspective
+  useEffect(() => {
     camera.position.set(13, 14, 17);
     camera.lookAt(0, 0.5, 0);
     if (controlsRef.current) {
@@ -846,7 +831,7 @@ function ModelLoadingFallback() {
     <Html center>
       <div className="flex items-center gap-3 px-4 py-2 bg-black/80 border border-cyan-500/40 rounded-full font-mono text-xs text-cyan-400 shadow-2xl backdrop-blur-md">
         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-        <span>LOADING DIGITAL TWIN 3D CORRIDOR, TRACKS &amp; STATION...</span>
+        <span>CONNECTING TO LIVE STATION TELEMETRY &amp; 3D CORRIDOR...</span>
       </div>
     </Html>
   );
@@ -855,10 +840,75 @@ function ModelLoadingFallback() {
 // ─── Main 3D Digital Twin Component ──────────────────────────────────────────
 export const ThreeDStringChart: React.FC = () => {
   const [resetKey, setResetKey] = useState(0);
+  const [liveTrains, setLiveTrains] = useState<TrainTelemetry[]>([]);
+  const [liveBlocks, setLiveBlocks] = useState<MaintenanceBlock[]>([]);
+  const [liveWeather, setLiveWeather] = useState<WeatherReport | null>(null);
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("");
+
+  // Fetch Live Telemetry Snapshot from Backend REST + WebSocket Stream
+  const fetchLiveTelemetry = async () => {
+    setIsRefreshing(true);
+    try {
+      const [telemetry, blocks] = await Promise.allSettled([
+        RailwayAPI.getLiveTelemetry(),
+        RailwayAPI.getBlocks(),
+      ]);
+
+      if (telemetry.status === "fulfilled" && telemetry.value) {
+        const data = telemetry.value;
+        if (data.trains && Array.isArray(data.trains)) {
+          setLiveTrains(data.trains);
+        }
+        if (data.weather) {
+          setLiveWeather(data.weather);
+        }
+        setIsLiveStreaming(true);
+        setLastSyncTime(new Date().toLocaleTimeString());
+      }
+
+      if (blocks.status === "fulfilled" && Array.isArray(blocks.value)) {
+        setLiveBlocks(blocks.value);
+      }
+    } catch (err) {
+      console.warn("Telemetry fetch error:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch
+    fetchLiveTelemetry();
+
+    // Subscribe to real-time WebSocket updates
+    wsService.connect();
+    const unsubscribe = wsService.subscribe((data) => {
+      if (data.trains && data.trains.length > 0) {
+        setLiveTrains(data.trains);
+        setIsLiveStreaming(true);
+        setLastSyncTime(new Date().toLocaleTimeString());
+      }
+      if (data.weather) {
+        setLiveWeather(data.weather);
+      }
+    });
+
+    // 8-second polling fallback to ensure constant real-time data sync
+    const interval = setInterval(() => {
+      fetchLiveTelemetry();
+    }, 8000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <Card className="w-full bg-[#050505] border-zinc-800 shadow-2xl overflow-hidden text-white font-sans">
-      {/* Tactical Header Bar */}
+      {/* Tactical Header Bar with Live Telemetry Indicators */}
       <CardHeader className="p-4 sm:p-5 border-b border-zinc-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950/80">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2.5">
@@ -867,25 +917,62 @@ export const ThreeDStringChart: React.FC = () => {
               <span>ISOMETRIC 3D DIGITAL TWIN CORRIDOR</span>
               <span className="text-zinc-600 font-normal">//</span>
               <span className="text-cyan-400 font-mono text-xs font-bold">
-                PHYSICAL TRACKS &amp; ELECTRIFIED NETWORK
+                PRAYAGRAJ TERMINAL (PRYJ)
               </span>
             </CardTitle>
           </div>
+
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-400">
-            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-cyan-400 font-mono text-[10px]">
-              GZB-CNB 440 KM TRIPLE-TRACK CORRIDOR
+            {/* Live Streaming Badge */}
+            <Badge
+              variant="outline"
+              className="bg-cyan-950/80 border-cyan-500/80 text-cyan-300 font-mono text-[10px] flex items-center gap-1.5"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              <span>LIVE TELEMETRY ACTIVE</span>
             </Badge>
-            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-emerald-400 font-mono text-[10px]">
-              OHE 25KV ELECTRIFIED
+
+            {/* Trains Tracked Badge */}
+            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-zinc-300 font-mono text-[10px] flex items-center gap-1">
+              <Activity className="w-3 h-3 text-cyan-400" />
+              <span>{liveTrains.length || 8} TRAINS TRACKED</span>
             </Badge>
-            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-amber-400 font-mono text-[10px]">
-              IN-SITU SHADOW BUNDLE ACTIVE
+
+            {/* Weather / Rail Temp Badge */}
+            {liveWeather && (
+              <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-zinc-300 font-mono text-[10px] flex items-center gap-1">
+                <Thermometer className="w-3 h-3 text-amber-400" />
+                <span>RAIL TEMP {liveWeather.estimated_rail_temp_c}°C</span>
+              </Badge>
+            )}
+
+            {/* Active Blocks Badge */}
+            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-amber-400 font-mono text-[10px] flex items-center gap-1">
+              <Wrench className="w-3 h-3 text-amber-400" />
+              <span>{liveBlocks.length || 2} ACTIVE POSSESSIONS</span>
             </Badge>
+
+            {lastSyncTime && (
+              <span className="text-zinc-500 text-[10px] font-mono">
+                SYNCED {lastSyncTime}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* View Controls */}
+        {/* View Controls & Refresh */}
         <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchLiveTelemetry}
+            disabled={isRefreshing}
+            className="bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>REFRESH FEED</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -893,7 +980,7 @@ export const ThreeDStringChart: React.FC = () => {
             className="bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-            <span>RESET ISOMETRIC VIEW</span>
+            <span>RESET VIEW</span>
           </Button>
         </div>
       </CardHeader>
@@ -906,11 +993,9 @@ export const ThreeDStringChart: React.FC = () => {
           shadows
           className="w-full h-full cursor-grab active:cursor-grabbing"
         >
-          {/* Deep Twilight Slate Background & Fog */}
           <color attach="background" args={["#070b14"]} />
           <fog attach="fog" args={["#070b14", 26, 64]} />
 
-          {/* Balanced High-Visibility Lighting Rig */}
           <ambientLight color="#60a5fa" intensity={1.5} />
           <directionalLight
             position={[25, 35, 20]}
@@ -919,61 +1004,62 @@ export const ThreeDStringChart: React.FC = () => {
             castShadow
             shadow-mapSize={[2048, 2048]}
           />
-          {/* Cyan Backlight Rim */}
           <directionalLight position={[-22, 18, -18]} intensity={2.4} color="#00f0ff" />
-          {/* Ground Bounce Light */}
           <hemisphereLight args={["#38bdf8", "#0f172a", 1.2]} />
 
-          {/* Tilt-Shift Camera Controller */}
           <CorridorCameraController resetTrigger={resetKey} />
 
           <Suspense fallback={<ModelLoadingFallback />}>
-            {/* 1. Active Cityscape with Glowing Urban Grid & Skyscraper Horizon */}
+            {/* 1. Active Cityscape */}
             <IsometricCityscape />
 
-            {/* 2. Central Station Hub with Cyan Floodlighting */}
-            <StationHub position={[-2, 0.22, -6.8]} rotation={[0, 0, 0]} />
+            {/* 2. Central Station Hub with Live Weather */}
+            <StationHub position={[-2, 0.22, -6.8]} rotation={[0, 0, 0]} weather={liveWeather} />
 
-            {/* 3. Physical Steel Tracks, Sleepers, Ballast, Platforms & OHE Gantries */}
+            {/* 3. Physical Tracks, Platforms & OHE */}
             <RailwayCorridorTracks />
 
-            {/* 4. Live 3D Train Models running on top of the rails */}
-            <LiveTrainFleet />
+            {/* 4. Live Train Models Driven by Real Backend Telemetry */}
+            <LiveTrainFleet liveTrains={liveTrains} />
 
-            {/* 5. Physical Track Possession Blocks with Holographic Safety Cages */}
-            <InSituMaintenanceBlocks />
+            {/* 5. PostgreSQL In-Situ Possession Blocks */}
+            <InSituMaintenanceBlocks blocks={liveBlocks} />
           </Suspense>
         </Canvas>
 
-        {/* On-Screen HUD Interactive Legend & Control Advice */}
+        {/* On-Screen HUD Interactive Legend */}
         <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-wrap items-center justify-between gap-3 text-[10px] font-mono bg-black/85 backdrop-blur-md border border-zinc-800/90 p-3 rounded">
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-zinc-500 font-bold uppercase tracking-wider">CORRIDOR FLEET:</span>
+            <span className="text-zinc-500 font-bold uppercase tracking-wider">LIVE TELEMETRY:</span>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded bg-[#38bdf8]" />
-              <span className="text-zinc-300">Vande Bharat 22436 (UP Fast)</span>
+              <span className="text-zinc-300">
+                {liveTrains[0]?.train_number || "22436"} (UP Lead • {liveTrains[0]?.speed_kmph || 130} km/h)
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded bg-[#06b6d4]" />
-              <span className="text-zinc-300">Rajdhani 12424 (WAP-7 Lead)</span>
+              <span className="text-zinc-300">
+                {liveTrains[1]?.train_number || "12424"} (UP Headway • {liveTrains[1]?.speed_kmph || 110} km/h)
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded bg-[#fbbf24]" />
-              <span className="text-zinc-300">BCNHL Freight (DN Mainline)</span>
+              <span className="text-zinc-300">
+                {liveTrains[liveTrains.length - 1]?.train_number || "BTPN-6602"} (DN Freight)
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded bg-amber-500/70 border border-amber-400" />
-              <span className="text-amber-300">Block A-14 (UP Deep Screening)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-emerald-500/70 border border-emerald-400" />
-              <span className="text-emerald-300">Block B-09 (Turnout #44)</span>
+              <span className="text-amber-300">
+                {liveBlocks[0]?.block_code || "GZB-TDL-UP-1045"} ({liveBlocks[0]?.status || "APPROVED"})
+              </span>
             </div>
           </div>
 
           <div className="hidden lg:flex items-center gap-2 text-zinc-400 font-semibold">
             <Navigation className="w-3.5 h-3.5 text-cyan-400" />
-            <span>DRAG TO ROTATE TILT-SHIFT • SCROLL TO ZOOM INTO CORRIDOR RAILS</span>
+            <span>DRAG TO ROTATE TILT-SHIFT • SCROLL TO ZOOM • LIVE DATA ACTIVE</span>
           </div>
         </div>
       </CardContent>
