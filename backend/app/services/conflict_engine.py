@@ -118,7 +118,70 @@ class SpatialTemporalConflictEngine:
                             })
                             break
 
-        # 3. Check Inter-Departmental Overlaps & Bundling Synergies
+        # 3. Check OHE Elementary Section (ES) Isolation & Neutral Section Hazards (G&SR Standard)
+        for b in proposed_blocks:
+            is_ohe = (
+                b.get("department") in ("TDMS", "TRD", "TRACTION_DISTRIBUTION") or
+                b.get("ohe_power_isolated", False) is True
+            )
+            if not is_ohe:
+                continue
+
+            b_start_km = float(b.get("start_km", 0.0))
+            b_end_km = float(b.get("end_km", b_start_km + 5.0))
+            mean_km = (b_start_km + b_end_km) / 2.0
+            es = self.network.get_elementary_section_for_km(mean_km, b.get("direction", "UP"))
+
+            if es:
+                es_start_km = es.start_km
+                es_end_km = es.end_km
+                b_start_min = float(b.get("start_minute", 400))
+                b_end_min = float(b.get("end_minute", b_start_min + b.get("duration_minutes", 120)))
+
+                for train in trajectories:
+                    pts = train.get("points", [])
+                    for i in range(len(pts) - 1):
+                        p1 = pts[i]
+                        p2 = pts[i + 1]
+                        t_km_min = min(p1["km"], p2["km"])
+                        t_km_max = max(p1["km"], p2["km"])
+
+                        # Spatial overlap with the full physical Elementary Section
+                        if not (es_end_km < t_km_min or es_start_km > t_km_max):
+                            entry_min = min(p1["minute"], p2["minute"])
+                            exit_min = max(p1["minute"], p2["minute"])
+
+                            # Temporal overlap with power cutoff window
+                            if not (b_end_min < entry_min or b_start_min > exit_min):
+                                neutral_info = f", Neutral Section at Km {es.neutral_section_km}" if es.neutral_section_km else ""
+                                conflicts.append({
+                                    "id": f"OHE_HAZARD_{train['train_id']}_{es.section_id}",
+                                    "type": "OHE_NEUTRAL_SECTION_HAZARD",
+                                    "severity": "CRITICAL",
+                                    "title": f"OHE Neutral Section Hazard: {train['name']} ({train['train_id']})",
+                                    "location_km": es_start_km,
+                                    "end_km": es_end_km,
+                                    "department": "TDMS",
+                                    "elementary_section_id": es.section_id,
+                                    "feeding_post": es.feeding_post,
+                                    "isolator_id": es.isolator_id,
+                                    "neutral_section_km": es.neutral_section_km,
+                                    "impacted_trains": [train["train_id"]],
+                                    "estimated_delay_mins": round(max(20.0, b_end_min - entry_min), 1),
+                                    "message": (
+                                        f"Electric locomotive on {train['name']} ({train['train_id']}) scheduled to enter "
+                                        f"de-energized OHE Elementary Section {es.section_id} (Km {es_start_km:.1f} - {es_end_km:.1f}, "
+                                        f"Feeding Post: {es.feeding_post}, Isolator: {es.isolator_id}{neutral_info}) "
+                                        f"during 25kV power cutoff window ({b_start_min:.0f} - {b_end_min:.0f} mins)."
+                                    ),
+                                    "recommended_action": (
+                                        f"De-energize section between Isolators {es.isolator_id}, issue Caution Order "
+                                        f"for electric locos to coast or regulate at upstream junction."
+                                    ),
+                                })
+                                break
+
+        # 4. Check Inter-Departmental Overlaps & Bundling Synergies
         for i in range(len(proposed_blocks)):
             for j in range(i + 1, len(proposed_blocks)):
                 b1 = proposed_blocks[i]

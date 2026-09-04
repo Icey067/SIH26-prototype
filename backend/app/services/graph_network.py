@@ -23,6 +23,79 @@ STATION_NODES = [
     {"id": "CNB", "name": "Kanpur Central", "km": 440.0, "type": "TERMINAL_JUNCTION", "platforms": 10},
 ]
 
+class ElementarySection(BaseModel):
+    section_id: str
+    track_section_id: str = "NCR-GZB-TDL-UP"
+    line: str = "UP"
+    start_km: float
+    end_km: float
+    feeding_post: str
+    isolator_id: str
+    neutral_section_km: Optional[float] = None
+
+# OHE Physical Electrical Elementary Section Partitioning (G&SR Norms)
+ELEMENTARY_SECTIONS: List[ElementarySection] = [
+    ElementarySection(section_id="ES-GZB-DER-01", line="BOTH", start_km=0.0, end_km=37.0, feeding_post="FP-GZB", isolator_id="ISO-12-1"),
+    ElementarySection(section_id="ES-DER-ALJN-02", line="BOTH", start_km=37.0, end_km=81.2, feeding_post="FP-DER", isolator_id="ISO-48-2"),
+    ElementarySection(section_id="ES-GZB-TDL-04", line="BOTH", start_km=81.2, end_km=94.6, feeding_post="FP-ALJN", isolator_id="ISO-88-1", neutral_section_km=92.5),
+    ElementarySection(section_id="ES-ALJN-HRS-05", line="BOTH", start_km=94.6, end_km=156.0, feeding_post="FP-ALJN", isolator_id="ISO-130-1"),
+    ElementarySection(section_id="ES-HRS-TDL-06", line="BOTH", start_km=156.0, end_km=204.0, feeding_post="FP-HRS", isolator_id="ISO-182-1"),
+    ElementarySection(section_id="ES-TDL-SKB-07", line="BOTH", start_km=204.0, end_km=240.0, feeding_post="FP-TDL", isolator_id="ISO-218-1"),
+    ElementarySection(section_id="ES-SKB-ETW-08", line="BOTH", start_km=240.0, end_km=296.0, feeding_post="FP-SKB", isolator_id="ISO-265-2"),
+    ElementarySection(section_id="ES-ETW-PHD-09", line="BOTH", start_km=296.0, end_km=352.0, feeding_post="FP-ETW", isolator_id="ISO-320-1"),
+    ElementarySection(section_id="ES-PHD-RURA-10", line="BOTH", start_km=352.0, end_km=394.0, feeding_post="FP-PHD", isolator_id="ISO-375-1"),
+    ElementarySection(section_id="ES-RURA-CNB-11", line="BOTH", start_km=394.0, end_km=440.0, feeding_post="FP-PNK", isolator_id="ISO-415-2"),
+]
+
+# Track Machine Stabling Yards and Specifications
+MACHINE_CRUISING_SPEED_KMPH = 35.0
+MACHINE_SETUP_CLEARING_MARGIN_MINS = 15.0
+
+MACHINE_DEPOTS = [
+    {
+        "depot_id": "DEPOT-GZB",
+        "name": "Ghaziabad Track Machine Depot",
+        "km": 0.0,
+        "station_id": "GZB",
+        "fleet": {
+            "BCM": ["BCM_01"],
+            "CSM": ["CSM_01"],
+            "UNIMAT": ["UNIMAT_01"],
+            "TOWER_WAGON": ["TW_01"],
+            "RAIL_TENSOR": ["RT_01"],
+            "FLASH_BUTT_WELDING": ["FBW_01"],
+        }
+    },
+    {
+        "depot_id": "DEPOT-TDL",
+        "name": "Tundla Operational Yard Depot",
+        "km": 204.0,
+        "station_id": "TDL",
+        "fleet": {
+            "BCM": ["BCM_02"],
+            "CSM": ["CSM_02"],
+            "UNIMAT": ["UNIMAT_02"],
+            "TOWER_WAGON": ["TW_02"],
+            "RAIL_TENSOR": ["RT_02"],
+            "FLASH_BUTT_WELDING": ["FBW_02"],
+        }
+    },
+    {
+        "depot_id": "DEPOT-CNB",
+        "name": "Kanpur Central Base Depot",
+        "km": 440.0,
+        "station_id": "CNB",
+        "fleet": {
+            "BCM": ["BCM_03"],
+            "CSM": ["CSM_03"],
+            "UNIMAT": ["UNIMAT_03"],
+            "TOWER_WAGON": ["TW_03"],
+            "RAIL_TENSOR": ["RT_03"],
+            "FLASH_BUTT_WELDING": ["FBW_03"],
+        }
+    }
+]
+
 class CorridorNetwork:
     """Directed Multigraph representing the Ghaziabad - Kanpur railway corridor."""
 
@@ -82,8 +155,8 @@ class CorridorNetwork:
                 status="CLEAR",
             )
 
-            # Loop Lines at Major Junctions for Regulation & Stabling
-            if src["type"] in ["MAJOR_JUNCTION", "DIVISIONAL_JUNCTION", "TERMINAL_JUNCTION"]:
+            # Loop Lines & Siding for Regulation & Stabling (Intermediate Stations included)
+            if src["type"] in ["MAJOR_JUNCTION", "DIVISIONAL_JUNCTION", "TERMINAL_JUNCTION", "JUNCTION", "STATION_CROSSOVER"]:
                 self.graph.add_edge(
                     src["id"],
                     dst["id"],
@@ -98,6 +171,53 @@ class CorridorNetwork:
                     tss_sector=f"TSS-{src['id']}",
                     status="CLEAR",
                 )
+
+    @staticmethod
+    def get_elementary_section_for_km(km: float, line: str = "UP") -> Optional[ElementarySection]:
+        """Returns the physical OHE elementary section enclosing this kilometer marker."""
+        for es in ELEMENTARY_SECTIONS:
+            if es.start_km <= km <= es.end_km:
+                return es
+        return None
+
+    @staticmethod
+    def find_nearest_machine_depot(km: float, machinery_type: str = "CSM") -> Dict[str, Any]:
+        """
+        Calculates machine transit time & work window specs based on RDSO 35 km/h cruising norms.
+        Required Window = PredictedDuration + 2 * (Distance / 35 km/h * 60) + 15 min setup.
+        """
+        best_depot = None
+        min_dist = float("inf")
+
+        for depot in MACHINE_DEPOTS:
+            dist = abs(depot["km"] - km)
+            if dist < min_dist:
+                min_dist = dist
+                best_depot = depot
+
+        if not best_depot:
+            best_depot = MACHINE_DEPOTS[1] # Default Tundla
+            min_dist = abs(best_depot["km"] - km)
+
+        fleet_list = best_depot.get("fleet", {}).get(machinery_type, [])
+        unit_id = fleet_list[0] if fleet_list else f"{machinery_type}_{best_depot['station_id']}_01"
+
+        one_way_transit_mins = round((min_dist / MACHINE_CRUISING_SPEED_KMPH) * 60.0, 1)
+        round_trip_transit_mins = round(2.0 * one_way_transit_mins, 1)
+
+        return {
+            "depot_id": best_depot["depot_id"],
+            "depot_name": best_depot["name"],
+            "depot_km": best_depot["km"],
+            "station_id": best_depot["station_id"],
+            "machinery_type": machinery_type,
+            "machine_unit_id": unit_id,
+            "distance_km": round(min_dist, 1),
+            "cruising_speed_kmph": MACHINE_CRUISING_SPEED_KMPH,
+            "one_way_transit_mins": one_way_transit_mins,
+            "round_trip_transit_mins": round_trip_transit_mins,
+            "setup_clearing_margin_mins": MACHINE_SETUP_CLEARING_MARGIN_MINS,
+        }
 
     def get_topology_dict(self) -> Dict[str, Any]:
         """Serializes the Multigraph topology for the React Frontend."""
@@ -131,6 +251,8 @@ class CorridorNetwork:
             "total_length_km": 440.0,
             "nodes": sorted(nodes, key=lambda x: x["km"]),
             "edges": edges,
+            "elementary_sections": [es.dict() for es in ELEMENTARY_SECTIONS],
+            "machine_depots": MACHINE_DEPOTS,
         }
 
     def get_scheduled_train_trajectories(self) -> List[Dict[str, Any]]:
@@ -254,6 +376,25 @@ class CorridorNetwork:
                     {"km": 204.0, "minute": 1115, "time_str": "18:35", "station": "TDL"},
                     {"km": 126.0, "minute": 1160, "time_str": "19:20", "station": "ALJN"},
                     {"km": 0.0, "minute": 1230, "time_str": "20:30", "station": "GZB"},
+                ],
+            },
+            # 8. BOXN_Freight_702 Container Freight (GZB -> CNB) (DN Line)
+            {
+                "train_id": "BOXN_Freight_702",
+                "name": "BOXN Container Freight",
+                "direction": "DN",
+                "priority": "FREIGHT",
+                "weight": 3,
+                "color": "#4b5563",
+                "points": [
+                    {"km": 0.0, "minute": 420, "time_str": "07:00", "station": "GZB"},
+                    {"km": 37.0, "minute": 460, "time_str": "07:40", "station": "DER"},
+                    {"km": 126.0, "minute": 550, "time_str": "09:10", "station": "ALJN"},
+                    {"km": 156.0, "minute": 590, "time_str": "09:50", "station": "HRS"},
+                    {"km": 204.0, "minute": 640, "time_str": "10:40", "station": "TDL"},
+                    {"km": 240.0, "minute": 685, "time_str": "11:25", "station": "SKB"},
+                    {"km": 296.0, "minute": 750, "time_str": "12:30", "station": "ETW"},
+                    {"km": 440.0, "minute": 900, "time_str": "15:00", "station": "CNB"},
                 ],
             },
         ]

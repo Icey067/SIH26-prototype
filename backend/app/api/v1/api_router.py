@@ -5,6 +5,7 @@ from app.api.v1.timetable import router as timetable_router
 from app.api.v1.predictions import router as predictions_router
 from app.api.v1.conflicts import router as conflicts_router
 from app.api.v1.live_ws import router as live_router
+from app.api.v1.sync import router as sync_router
 
 api_router = APIRouter()
 
@@ -14,3 +15,4 @@ api_router.include_router(timetable_router)
 api_router.include_router(predictions_router)
 api_router.include_router(conflicts_router)
 api_router.include_router(live_router)
+api_router.include_router(sync_router)

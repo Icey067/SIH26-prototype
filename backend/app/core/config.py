@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     
     # Database URL
     DATABASE_URL: str = "sqlite:///./samanvay.db"
+    SECRET_KEY: str = "samanvay-ir-gsr-ptw-secret-key-2026"
     
     # CORS
     CORS_ORIGINS: List[str] = [
