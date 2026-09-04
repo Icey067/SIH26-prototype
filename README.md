@@ -10,7 +10,7 @@
 [![Google OR-Tools](https://img.shields.io/badge/Solver-Google_OR--Tools_CP--SAT-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/optimization)
 [![Three.js](https://img.shields.io/badge/3D_Engine-Three.js_+_R3F-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
 [![Scikit-Learn](https://img.shields.io/badge/ML_Engine-Scikit--Learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
-[![Gemini](https://img.shields.io/badge/AI_Triage-Google_Gemini_Flash-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Autonomous NLP Engine](https://img.shields.io/badge/AI_Triage-Autonomous_NLP_Core-8E75B2?style=for-the-badge&logo=circuitverse&logoColor=white)](https://fastapi.tiangolo.com/)
 
 ---
 
@@ -34,7 +34,7 @@ Currently, section controllers rely on subjective manual logbooks and fragmented
 | **Corridor Downtime** | Disjoint separate blocks | Synchronized shadow bundling | **62% Reduction in Track Possession Overhead** |
 | **Punctuality Impact** | 45–90 min cascade delays | Headway-protected windows | **Zero Delay on Premium Timetables (VB/Rajdhani)** |
 | **Solver Latency** | 2–3 hours phone deliberation | Google OR-Tools CP-SAT | **Sub-140ms Mathematical Optimal Solution** |
-| **Block Burst Rate** | 23.4% overrun rate | ML Duration Predictor ($R^2 = 0.94$) | **&lt; 0.8% Block Overrun Incidence** |
+| **Block Burst Rate** | 23.4% overrun rate | ML Duration Predictor ($R^2 = 0.94$) | **< 0.8% Block Overrun Incidence** |
 | **Regulatory Safety** | Paper logbook entries | Private Number (PN) Audit Trail | **100% G&SR Compliance & Instant Verification** |
 
 ---
@@ -67,8 +67,37 @@ Manual requests estimate block duration with static human bias. Samanvay-AI depl
 * Crew strength & track gradient profile
 * Output: Calibrated completion window ($R^2 = 0.94$) preventing block bursts.
 
-### 4. Gemini Multilingual AI Defect Triage
-Audio voice logs from gangmen in **Hindi, English, or regional dialects** are ingested, translated, and parsed into structured JSON defects (severity, location KM, recommended TSR) in real time.
+### 4. Autonomous Multilingual NLP Defect Triage
+Audio voice logs and unstructured field notes from gangmen in **Hindi, English, or Hinglish** are ingested, translated, and parsed into structured JSON defect tickets (severity, location KM, recommended TSR, required machinery, and root cause) using an autonomous NLP engine with automatic round-robin key failover.
+
+---
+
+## Database Schema & Storage Architecture
+
+Samanvay utilizes an enterprise **SQLAlchemy 2.0 ORM** storage layer (persisted to SQLite `samanvay.db` in development, or cloud PostgreSQL in production) structured around 6 core relational tables:
+
+```mermaid
+erDiagram
+    TRACK_SECTIONS ||--o{ MAINTENANCE_BLOCKS : spans
+    TRACK_SECTIONS ||--o{ DEFECTS : contains
+    TRACK_SECTIONS ||--o{ TRAIN_SCHEDULES : traverses
+    MAINTENANCE_BLOCKS ||--o{ BLOCK_DEFECT_ASSOCIATIONS : bundles
+    DEFECTS ||--o{ BLOCK_DEFECT_ASSOCIATIONS : resolved_by
+    USERS ||--o{ MAINTENANCE_BLOCKS : authorizes
+```
+
+1. **`track_sections`**: 
+   Corridor topological definitions across Prayagraj Division (e.g., `NCR-GZB-TDL-UP`), start/end Km markers, terminal stations (`GZB`, `TDL`, `CNB`), speed limits (130/160 km/h), and 25 kV OHE traction voltage ratings.
+2. **`maintenance_blocks`**: 
+   Stores track possession requests, shadow block bundles, multi-department assignments (`"ENG,S&T,TRD"`), assigned machinery (BCM, CSM, Tower Wagon), and G&SR 4.14 Dual-Key Handshake tokens (`controller_private_number`, `station_master_private_number`, HMAC offline `safety_lease_token`, and cancellation audit codes).
+3. **`defects`**: 
+   Aggregated maintenance backlogs unified from legacy silos (TMS, SMMS, TDMS) with severity rank (`CRITICAL`, `MAJOR`, `MINOR`), speed restrictions (TSR), GPS coordinates, and ML criticality scores (0–100).
+4. **`block_defect_associations`**: 
+   Many-to-many junction mapping which maintenance block possession bundles and resolves which pending backlog defects.
+5. **`train_schedules`**: 
+   Time-indexed COA timetable slots for Vande Bharat, Rajdhani, Superfast, Mail/Express, and Freight trains with priority weighting (1 to 5).
+6. **`users`**: 
+   Role-based access control for Section Controllers, Dispatchers, and Field Engineers with division credentials.
 
 ---
 
@@ -129,7 +158,7 @@ Audio voice logs from gangmen in **Hindi, English, or regional dialects** are in
 * **Corridor Radar** (`/corridor-radar`): Full-screen quad-track synoptic radar, active train fleet telemetry table, and temporary speed restriction (TSR) advisory cards.
 * **Active Blocks** (`/active-blocks`): Possession cockpit, remaining block countdown timers, and cryptographic Private Number authorization modals.
 * **Timetable Gantt** (`/timetable-gantt`): Dedicated view with 3D Space-Time Matrix, 2D Mares-Chauveau string chart, and Gantt timeline tabs.
-* **Defect Triage Matrix** (`/defect-triage`): Asset health matrix with acoustic/ultrasonic flaw telemetry and Gemini AI multilingual voice triage modal.
+* **Defect Triage Matrix** (`/defect-triage`): Asset health matrix with acoustic/ultrasonic flaw telemetry and autonomous NLP multilingual voice triage modal.
 * **Track Weather Watch** (`/track-weather`): Continuous Welded Rail (CWR) sensor arrays across GZB, ALJN, TDL, and CNB with automated sun-kink buckling risk advisories.
 
 ---
@@ -150,6 +179,7 @@ Backend Architecture:
 ├── Google OR-Tools (Constraint Programming CP-SAT Solver)
 ├── Scikit-Learn (Predictive ML block duration regression)
 ├── NetworkX (Directed multigraph corridor topology)
+├── SQLAlchemy 2.0 (Relational ORM for track, block & defect models)
 ├── Uvicorn (ASGI web server)
 └── Native WebSockets (Real-time bi-directional telemetry broadcast)
 ```

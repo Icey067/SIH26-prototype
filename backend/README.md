@@ -1,6 +1,7 @@
 # Samanvay-AI: Central Backend & AI Optimization Engine
 **Problem ID:** SIH-26027  
-**Title:** AI-Powered Automatic Block Planning to Maximize Asset Availability for Train Operations on Indian Railways
+**Title:** AI-Powered Automatic Block Planning to Maximize Asset Availability for Train Operations on Indian Railways  
+**Division:** North Central Railway (NCR) • Prayagraj Division (GZB-TDL-CNB 440 Km Trunk Corridor)
 
 ---
 
@@ -23,13 +24,14 @@ backend/
 │   ├── main.py                     # FastAPI application entrypoint & CORS
 │   ├── core/
 │   │   ├── config.py               # Pydantic Settings & environment config
-│   │   └── database.py             # SQLAlchemy engine & session factory
+│   │   ├── database.py             # SQLAlchemy engine & session factory
+│   │   └── key_rotator.py          # Round-Robin API key rotator & failover engine
 │   ├── models/
 │   │   ├── user.py                 # Section Controller & Field Engineer accounts
 │   │   ├── track_section.py        # Indian Railways corridor segments & lines
 │   │   ├── defect.py               # TMS, SMMS, TDMS defects & criticality
 │   │   ├── timetable.py            # COA train paths, priorities & transit slots
-│   │   └── block.py                # Maintenance blocks, bundles & PTW exchange
+│   │   └── block.py                # Maintenance blocks, bundles & Dual-Key PTW
 │   ├── schemas/
 │   │   ├── common.py               # Enums (Department, Severity, BlockStatus)
 │   │   ├── defect.py               # Defect request/response validation
@@ -39,18 +41,27 @@ backend/
 │   ├── api/
 │   │   └── v1/
 │   │       ├── api_router.py       # Consolidated API router
-│   │       ├── defects.py          # Defect CRUD & scoring endpoints
+│   │       ├── defects.py          # Defect CRUD & NLP triage endpoints
 │   │       ├── blocks.py           # Block planning & OR-Tools CP-SAT generator
+│   │       ├── conflicts.py        # Continuous spatial-temporal collision detection
+│   │       ├── live_ws.py          # Real-time WebSocket train telemetry stream
 │   │       ├── timetable.py        # Timetable gap analysis
 │   │       └── sync.py             # Mobile delta sync (downstream & upstream)
 │   └── services/
+│       ├── block_optimizer.py      # Google OR-Tools CP-SAT timetable bundler
 │       ├── defect_scorer.py        # ML Criticality Scoring Engine (0-100)
-│       └── block_optimizer.py      # Google OR-Tools CP-SAT timetable bundler
+│       ├── gemini_service.py       # Autonomous Multilingual NLP Defect Parser
+│       ├── graph_network.py        # NetworkX Directed Multigraph Corridor Topology
+│       ├── safety_lease_service.py # HMAC-SHA256 Offline Field Lease Token Engine
+│       └── weather_service.py      # OpenWeather corridor telemetry & CWR rail temperature
 ├── data/
 │   └── seed_data.py                # Synthetic seeder (Prayagraj/NCR Golden Corridor)
 ├── tests/
 │   ├── conftest.py                 # Pytest session fixtures
 │   ├── test_api.py                 # Endpoints & optimization test suite
+│   ├── test_live.py                # Live telemetry & WebSocket tests
+│   ├── test_operational_hardening.py # Dual-key handshake, emergency revocation tests
+│   ├── test_roundrobin_keys.py    # Multi-key rotation & failover tests
 │   └── test_sync.py                # Mobile synchronization test suite
 ├── .env.example
 ├── requirements.txt
@@ -59,7 +70,30 @@ backend/
 
 ---
 
-## 3. Quickstart Guide
+## 3. Database Storage & Relational Models
+
+Data is managed using **SQLAlchemy 2.0 ORM** connected to SQLite (`samanvay.db`) in local development or PostgreSQL in cloud deployments.
+
+```mermaid
+erDiagram
+    TRACK_SECTIONS ||--o{ MAINTENANCE_BLOCKS : spans
+    TRACK_SECTIONS ||--o{ DEFECTS : contains
+    TRACK_SECTIONS ||--o{ TRAIN_SCHEDULES : traverses
+    MAINTENANCE_BLOCKS ||--o{ BLOCK_DEFECT_ASSOCIATIONS : bundles
+    DEFECTS ||--o{ BLOCK_DEFECT_ASSOCIATIONS : resolved_by
+    USERS ||--o{ MAINTENANCE_BLOCKS : authorizes
+```
+
+- **`track_sections`**: Corridor segment bounds, speed limits (130/160 km/h), electrification specs.
+- **`maintenance_blocks`**: Shadow block bundles, G&SR 4.14 Dual-Key Handshake tokens (`controller_private_number`, `station_master_private_number`), HMAC offline lease tokens (`safety_lease_token`), and assigned heavy machinery.
+- **`defects`**: Multi-department defect backlogs (TMS, SMMS, TDMS) with severity rank, speed restrictions (TSR), GPS coordinates, and ML risk scores.
+- **`block_defect_associations`**: Many-to-many junction mapping which block possession resolves which backlog defects.
+- **`train_schedules`**: COA train paths (Rajdhani, Vande Bharat, Freight) with priority ranks and timetable slots.
+- **`users`**: Role-based access control for Section Controllers, Dispatchers, and Field Crews.
+
+---
+
+## 4. Quickstart Guide
 
 ### Step 1: Install Dependencies
 ```bash
@@ -87,20 +121,19 @@ pytest -v
 
 ---
 
-## 4. Key Endpoints & API Highlights
+## 5. Key Endpoints & API Highlights
 
-### A. Mobile Offline Synchronization
-- **Downstream Sync (`GET /api/v1/sync/downstream`)**:
-  Fetches approved blocks, active TSRs, and open defects for local Room/SQLite caching in `IronSentinel`.
-- **Upstream Sync (`POST /api/v1/sync/upstream`)**:
-  Idempotent batch ingestion for offline-queued field defects, block demands, and protocol updates.
+### A. Dual-Key Safety Handshake & G&SR Workflows
+- **Controller Approval (`PUT /api/v1/blocks/{id}/controller-approve`)**:
+  Generates and logs Section Controller Private Number (PN) and sets caution orders.
+- **Station Master Concurrence (`PUT /api/v1/blocks/{id}/station-master-concur`)**:
+  Issues Station Master PN and mints an offline HMAC-SHA256 safety lease token for field crews.
+- **Emergency Revocation (`PUT /api/v1/blocks/{id}/emergency-revoke`)**:
+  Unilaterally cancels block in emergency scenarios (e.g. disaster relief express passage).
 
-### B. Defect Criticality Scoring (`GET /api/v1/defects`)
-Evaluates composite risk (0-100) considering:
-- Base severity (CRITICAL P1, MAJOR P2, MINOR P3)
-- Speed restriction severity (e.g. 30 kmph TSR = +25 pts)
-- System risk factor (TMS rail cracks carry direct derailment risk)
-- Aging backlog penalty
+### B. Autonomous NLP Multilingual Defect Parser (`POST /api/v1/defects/ai-parse`)
+- Ingests noisy voice notes or transcripts in Hindi, English, or Hinglish.
+- Structures them into validated railway defect schemas with automatic multi-key round-robin rotation.
 
 ### C. Google OR-Tools Constraint Optimizer (`POST /api/v1/blocks/optimize/generate`)
 - Scans train transit schedules across the corridor line.
