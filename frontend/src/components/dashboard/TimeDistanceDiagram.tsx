@@ -3,7 +3,8 @@ import { TrainTrajectory, MaintenanceBlock, ConflictItem } from "@/types/railway
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Train, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Train, AlertTriangle, ShieldAlert, Rotate3d, Layers } from "lucide-react";
+import { Marey3DView } from "./Marey3DView";
 
 interface TimeDistanceDiagramProps {
   trajectories: TrainTrajectory[];
@@ -27,6 +28,7 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
   conflicts,
   onOpenGrantModal,
 }) => {
+  const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
   const [selectedDirection, setSelectedDirection] = useState<"ALL" | "DN" | "UP">("ALL");
   const [hoveredTrain, setHoveredTrain] = useState<TrainTrajectory | null>(null);
   const [hoveredBlock, setHoveredBlock] = useState<MaintenanceBlock | null>(null);
@@ -67,19 +69,45 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
           <div className="flex items-center space-x-2">
             <CardTitle className="text-base font-bold tracking-tight text-white flex items-center gap-2">
               <Train className="h-5 w-5 text-cyan-400" />
-              Time-Distance String Chart (Mares-Chauveau Diagram)
+              Trajectory String Chart • Marey Distance-Time Dynamic Matrix
             </CardTitle>
             <Badge variant="outline" className="bg-cyan-950/60 border-cyan-700 text-cyan-300 text-[10px] font-mono">
-              24-HR CORRIDOR DYNAMICS
+              {viewMode === "3D" ? "3D VOLUMETRIC HOLOGRAPHIC" : "2D CLASSICAL STRING CHART"}
             </Badge>
           </div>
           <CardDescription className="text-xs text-gray-400 mt-0.5">
-            2D space-time trajectories: Distance (Y: 0-440 Km) vs Time (X: 00:00-24:00). Shaded rectangles indicate track possession exclusion zones.
+            {viewMode === "3D"
+              ? "Volumetric 3D space-time: Time (X: 00:00-24:00), Distance (Y: 0-440 Km), Track Line Depth (Z: UP vs DOWN). Blocks rendered as 3D possession prisms."
+              : "2D space-time trajectories: Distance (Y: 0-440 Km) vs Time (X: 00:00-24:00). Shaded rectangles indicate track possession exclusion zones."}
           </CardDescription>
         </div>
 
-        {/* Controls & Direction Toggles */}
-        <div className="flex items-center space-x-2">
+        {/* Controls, View Toggle & Direction Toggles */}
+        <div className="flex items-center space-x-2 flex-wrap gap-2">
+          {/* 2D vs 3D Mode Toggle */}
+          <div className="flex items-center rounded-lg bg-gray-900 border border-gray-800 p-0.5 text-xs shadow-inner">
+            <button
+              onClick={() => setViewMode("3D")}
+              className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 transition-all ${
+                viewMode === "3D"
+                  ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold shadow-md"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Rotate3d className="h-3.5 w-3.5 text-cyan-200" />
+              <span>3D Holographic</span>
+            </button>
+            <button
+              onClick={() => setViewMode("2D")}
+              className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 transition-all ${
+                viewMode === "2D" ? "bg-gray-800 text-white font-bold" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5 text-gray-400" />
+              <span>2D Classic</span>
+            </button>
+          </div>
+
           <div className="flex items-center rounded-lg bg-gray-900 border border-gray-800 p-0.5 text-xs">
             <button
               onClick={() => setSelectedDirection("ALL")}
@@ -122,17 +150,27 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
       </CardHeader>
 
       <CardContent className="p-4 relative overflow-x-auto">
-        {/* SVG Drawing Canvas */}
-        <svg
-          viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-          className="w-full h-auto min-w-[850px] font-sans select-none"
-        >
-          {/* Background Grid */}
-          <rect
-            x={PADDING_LEFT}
-            y={PADDING_TOP}
-            width={PLOT_WIDTH}
-            height={PLOT_HEIGHT}
+        {viewMode === "3D" ? (
+          <Marey3DView
+            trajectories={trajectories}
+            blocks={blocks}
+            conflicts={conflicts}
+            selectedDirection={selectedDirection}
+            showConflictsOnly={showConflictsOnly}
+            onOpenGrantModal={onOpenGrantModal}
+          />
+        ) : (
+          /* 2D SVG Drawing Canvas */
+          <svg
+            viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+            className="w-full h-auto min-w-[850px] font-sans select-none"
+          >
+            {/* Background Grid */}
+            <rect
+              x={PADDING_LEFT}
+              y={PADDING_TOP}
+              width={PLOT_WIDTH}
+              height={PLOT_HEIGHT}
             fill="#030712"
             stroke="#1f2937"
             strokeWidth="1"
@@ -373,6 +411,7 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
             );
           })}
         </svg>
+        )}
 
         {/* Floating Tooltips */}
         {hoveredTrain && (
