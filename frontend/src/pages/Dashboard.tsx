@@ -31,7 +31,7 @@ export default function Dashboard() {
 
   // UI Interactive States
   const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
-  const [selectedDirection, setSelectedDirection] = useState<"UP" | "DN" | "ALL">("UP");
+  const [selectedDirection, setSelectedDirection] = useState<"UP" | "DN" | "ALL">("ALL");
   const [highlightConflicts, setHighlightConflicts] = useState<boolean>(true);
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<"ALL" | "TMS" | "SMMS" | "TDMS">("ALL");
   const [isSolving, setIsSolving] = useState<boolean>(false);
@@ -40,21 +40,29 @@ export default function Dashboard() {
   const [conflictZoneResolved, setConflictZoneResolved] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString("en-IN"));
 
-  // Fetch initial API data from FastAPI backend
+  // Fetch initial API data from FastAPI backend with independent resilience
   const loadData = async () => {
     try {
-      const [blockData, telemetryData, trajectoryData, conflictData] = await Promise.all([
+      const results = await Promise.allSettled([
         RailwayAPI.getBlocks(),
         RailwayAPI.getLiveTelemetry(),
         RailwayAPI.getTrainTrajectories(),
         RailwayAPI.getActiveConflicts(),
       ]);
 
-      if (blockData && blockData.length > 0) setBlocks(blockData);
-      if (telemetryData.trains) setTrains(telemetryData.trains);
-      if (telemetryData.conflicts) setConflicts(telemetryData.conflicts);
-      if (trajectoryData) setTrajectories(trajectoryData);
-      if (conflictData) setConflictReport(conflictData);
+      if (results[0].status === "fulfilled" && results[0].value && results[0].value.length > 0) {
+        setBlocks(results[0].value);
+      }
+      if (results[1].status === "fulfilled" && results[1].value) {
+        if (results[1].value.trains) setTrains(results[1].value.trains);
+        if (results[1].value.conflicts) setConflicts(results[1].value.conflicts);
+      }
+      if (results[2].status === "fulfilled" && results[2].value && results[2].value.length > 0) {
+        setTrajectories(results[2].value);
+      }
+      if (results[3].status === "fulfilled" && results[3].value) {
+        setConflictReport(results[3].value);
+      }
     } catch (err) {
       console.error("Error fetching live dashboard telemetry:", err);
     }
