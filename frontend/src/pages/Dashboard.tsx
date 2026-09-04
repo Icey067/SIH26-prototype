@@ -17,10 +17,7 @@ import {
   Key,
   Loader2,
   Brain,
-  Rotate3d,
-  Layers,
 } from "lucide-react";
-import { Marey3DView } from "../components/dashboard/Marey3DView";
 
 export default function Dashboard() {
   const [trains, setTrains] = useState<TrainTelemetry[]>([]);
@@ -30,8 +27,7 @@ export default function Dashboard() {
   const [conflictReport, setConflictReport] = useState<ConflictReport | null>(null);
 
   // UI Interactive States
-  const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
-  const [selectedDirection, setSelectedDirection] = useState<"UP" | "DN" | "ALL">("ALL");
+  const [selectedDirection, setSelectedDirection] = useState<"UP" | "DN" | "ALL">("UP");
   const [highlightConflicts, setHighlightConflicts] = useState<boolean>(true);
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<"ALL" | "TMS" | "SMMS" | "TDMS">("ALL");
   const [isSolving, setIsSolving] = useState<boolean>(false);
@@ -40,29 +36,21 @@ export default function Dashboard() {
   const [conflictZoneResolved, setConflictZoneResolved] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString("en-IN"));
 
-  // Fetch initial API data from FastAPI backend with independent resilience
+  // Fetch initial API data from FastAPI backend
   const loadData = async () => {
     try {
-      const results = await Promise.allSettled([
+      const [blockData, telemetryData, trajectoryData, conflictData] = await Promise.all([
         RailwayAPI.getBlocks(),
         RailwayAPI.getLiveTelemetry(),
         RailwayAPI.getTrainTrajectories(),
         RailwayAPI.getActiveConflicts(),
       ]);
 
-      if (results[0].status === "fulfilled" && results[0].value && results[0].value.length > 0) {
-        setBlocks(results[0].value);
-      }
-      if (results[1].status === "fulfilled" && results[1].value) {
-        if (results[1].value.trains) setTrains(results[1].value.trains);
-        if (results[1].value.conflicts) setConflicts(results[1].value.conflicts);
-      }
-      if (results[2].status === "fulfilled" && results[2].value && results[2].value.length > 0) {
-        setTrajectories(results[2].value);
-      }
-      if (results[3].status === "fulfilled" && results[3].value) {
-        setConflictReport(results[3].value);
-      }
+      if (blockData && blockData.length > 0) setBlocks(blockData);
+      if (telemetryData.trains) setTrains(telemetryData.trains);
+      if (telemetryData.conflicts) setConflicts(telemetryData.conflicts);
+      if (trajectoryData) setTrajectories(trajectoryData);
+      if (conflictData) setConflictReport(conflictData);
     } catch (err) {
       console.error("Error fetching live dashboard telemetry:", err);
     }
@@ -417,32 +405,6 @@ export default function Dashboard() {
 
             {/* Chart View Controls */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* 2D vs 3D Mode Toggle */}
-              <div className="flex items-center rounded bg-surface-container-lowest p-0.5 border border-surface-container-high shadow-inner">
-                <button
-                  onClick={() => setViewMode("3D")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded font-mono text-[10px] font-bold transition-all ${
-                    viewMode === "3D"
-                      ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-950/80"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  <Rotate3d className="h-3.5 w-3.5 text-cyan-200" />
-                  <span>3D HOLOGRAPHIC</span>
-                </button>
-                <button
-                  onClick={() => setViewMode("2D")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded font-mono text-[10px] font-bold transition-all ${
-                    viewMode === "2D"
-                      ? "bg-surface-container-highest text-on-surface"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  <span>2D MATRIX</span>
-                </button>
-              </div>
-
               <div className="flex rounded bg-surface-container-lowest p-0.5 border border-surface-container-high">
                 <button
                   onClick={() => setSelectedDirection("UP")}
@@ -495,16 +457,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Main Marey Graph: 3D Holographic or 2D Classical Canvas */}
-          {viewMode === "3D" ? (
-            <Marey3DView
-              trajectories={trajectories}
-              blocks={blocks}
-              conflicts={conflictReport?.conflicts || []}
-              selectedDirection={selectedDirection}
-              showConflictsOnly={highlightConflicts}
-            />
-          ) : (
+          {/* Main Marey Graph Canvas Frame */}
           <div className="relative w-full rounded bg-surface-container-lowest overflow-hidden border border-surface-container-high">
             {/* Top Time Slot Header */}
             <div className="grid grid-cols-7 pl-28 pr-4 py-1.5 bg-surface-container text-on-surface-variant font-mono text-[11px] border-b border-surface-container-high">
@@ -701,7 +654,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          )}
         </section>
 
         {/* SECTION 3: Bottom Split Section (Dynamic Conflict Cockpit & Backlog Grant Control) */}
