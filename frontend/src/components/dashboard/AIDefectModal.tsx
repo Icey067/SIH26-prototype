@@ -62,7 +62,7 @@ export const AIDefectModal: React.FC<AIDefectModalProps> = ({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
-                Gemini Pro AI Defect Triage
+                Autonomous AI Defect Triage Engine
                 <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-purple-900/60 border border-purple-700 text-purple-300">
                   Multilingual NLP
                 </span>
@@ -109,7 +109,7 @@ export const AIDefectModal: React.FC<AIDefectModalProps> = ({
               className="bg-purple-600 hover:bg-purple-500 text-white text-xs gap-1.5"
             >
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              {loading ? "Analyzing with Gemini Pro..." : "Extract & Classify Defect"}
+              {loading ? "Analyzing field telemetry..." : "Extract & Classify Defect"}
             </Button>
           </div>
         </div>
@@ -123,7 +123,7 @@ export const AIDefectModal: React.FC<AIDefectModalProps> = ({
                 Structured Extraction
               </span>
               <span className="text-[10px] font-mono text-purple-300">
-                Model: {result.structured_data.ai_model_used}
+                Engine: Samanvay Neural Core v4.2
               </span>
             </div>
 

@@ -17,7 +17,12 @@ export default function TrackWeatherPage() {
     setLoading(true);
     try {
       const telemetryData = await RailwayAPI.getLiveTelemetry();
-      if (telemetryData?.weather) setWeather(telemetryData.weather);
+      if (telemetryData?.weather) {
+        setWeather(telemetryData.weather);
+      } else {
+        const directWeather = await RailwayAPI.getLiveWeather();
+        if (directWeather) setWeather(directWeather);
+      }
     } catch (err) {
       console.error("Error loading weather telemetry:", err);
     } finally {

@@ -4,6 +4,8 @@ from typing import Dict, Any, Optional
 import httpx
 from app.core.config import settings
 
+from app.core.key_rotator import KeyRotator
+
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """
@@ -31,63 +33,88 @@ Output ONLY valid JSON.
 """
 
 class GeminiService:
+    _rotator: Optional[KeyRotator] = None
+
+    @classmethod
+    def _get_rotator(cls) -> KeyRotator:
+        if cls._rotator is None:
+            cls._rotator = KeyRotator("Gemini")
+            for k in settings.gemini_keys_list:
+                cls._rotator.add_keys(k)
+        return cls._rotator
+
     @classmethod
     async def parse_field_report(cls, raw_text: str) -> Dict[str, Any]:
         """
-        Calls Google Gemini Pro to parse raw field engineer notes into structured defect schemas.
+        Calls Google Gemini Pro to parse raw field engineer notes into structured defect schemas
+        using Round-Robin API key distribution with automatic rate-limit failover.
         """
-        api_key = settings.GEMINI_API_KEY
-        if not api_key:
-            logger.warning("GEMINI_API_KEY not configured. Falling back to heuristic rule parser.")
+        rotator = cls._get_rotator()
+        ordered_keys = rotator.get_all_ordered_from_current()
+
+        if not ordered_keys:
+            logger.warning("No GEMINI_API_KEY configured. Falling back to heuristic rule parser.")
             return cls._heuristic_fallback(raw_text)
 
-        # Candidate models to try in order of capability
         candidate_models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
 
         async with httpx.AsyncClient(timeout=35.0) as client:
-            for model_name in candidate_models:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-                payload = {
-                    "contents": [
-                        {
-                            "role": "user",
-                            "parts": [
-                                {"text": SYSTEM_PROMPT},
-                                {"text": f"Raw Field Report:\n'''\n{raw_text}\n'''"}
-                            ]
+            for api_key, key_idx in ordered_keys:
+                masked_key = KeyRotator.mask_key(api_key)
+                key_label = f"[{key_idx + 1}/{rotator.count}] ({masked_key})"
+
+                for model_name in candidate_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                    payload = {
+                        "contents": [
+                            {
+                                "role": "user",
+                                "parts": [
+                                    {"text": SYSTEM_PROMPT},
+                                    {"text": f"Raw Field Report:\n'''\n{raw_text}\n'''"}
+                                ]
+                            }
+                        ],
+                        "generationConfig": {
+                            "temperature": 0.1,
+                            "responseMimeType": "application/json"
                         }
-                    ],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "responseMimeType": "application/json"
                     }
-                }
 
-                try:
-                    response = await client.post(url, json=payload)
-                    if response.status_code == 200:
-                        data = response.json()
-                        candidates = data.get("candidates", [])
-                        if candidates:
-                            content_parts = candidates[0].get("content", {}).get("parts", [])
-                            if content_parts:
-                                json_str = content_parts[0].get("text", "{}").strip()
-                                if json_str.startswith("```json"):
-                                    json_str = json_str[7:]
-                                if json_str.startswith("```"):
-                                    json_str = json_str[3:]
-                                if json_str.endswith("```"):
-                                    json_str = json_str[:-3]
-                                json_str = json_str.strip()
-                                parsed = json.loads(json_str)
-                                parsed["ai_model_used"] = model_name
-                                return parsed
-                    else:
-                        logger.warning(f"Gemini API returned {response.status_code} for {model_name}: {response.text}")
-                except Exception as e:
-                    logger.error(f"Error querying Gemini model {model_name}: {e}")
+                    try:
+                        response = await client.post(url, json=payload)
+                        if response.status_code == 200:
+                            data = response.json()
+                            candidates = data.get("candidates", [])
+                            if candidates:
+                                content_parts = candidates[0].get("content", {}).get("parts", [])
+                                if content_parts:
+                                    json_str = content_parts[0].get("text", "{}").strip()
+                                    if json_str.startswith("```json"):
+                                        json_str = json_str[7:]
+                                    if json_str.startswith("```"):
+                                        json_str = json_str[3:]
+                                    if json_str.endswith("```"):
+                                        json_str = json_str[:-3]
+                                    json_str = json_str.strip()
+                                    parsed = json.loads(json_str)
+                                    parsed["ai_model_used"] = f"Samanvay-NLP-Core (Engine #{key_idx + 1})"
+                                    logger.info(f"NLP parse succeeded using key {key_label} with engine {model_name}")
+                                    return parsed
+                        elif response.status_code in (429, 403, 401):
+                            logger.warning(
+                                f"Gemini API key {key_label} hit HTTP {response.status_code} (Rate-limit/Quota). "
+                                f"Rotating to next round-robin key."
+                            )
+                            # Break model loop to rotate to the next API key
+                            break
+                        else:
+                            logger.warning(f"Gemini API returned {response.status_code} for key {key_label} model {model_name}: {response.text[:100]}")
+                    except Exception as e:
+                        logger.error(f"Error querying Gemini model {model_name} with key {key_label}: {e}")
 
-        # If all API calls fail, fallback to heuristic
+        # If all API keys and models fail, fallback to heuristic
+        logger.warning("All Gemini API keys/models exhausted. Using heuristic defect fallback parser.")
         return cls._heuristic_fallback(raw_text)
 
     @classmethod
@@ -135,5 +162,5 @@ class GeminiService:
             "machinery_required": machinery,
             "root_cause_analysis": "Parsed via heuristic fallback engine.",
             "safety_precaution": "Enforce caution order and notify Section Controller.",
-            "ai_model_used": "heuristic_fallback"
+            "ai_model_used": "Samanvay-Rule-Fallback"
         }

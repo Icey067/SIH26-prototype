@@ -699,7 +699,7 @@ export default function LandingPage() {
           <span className="text-cyan-400">✦</span>
           <span>ZERO BLOCK BURSTS</span>
           <span className="text-emerald-400">✦</span>
-          <span>GEMINI MULTILINGUAL TRIAGE</span>
+          <span>AUTONOMOUS NLP DEFECT TRIAGE</span>
           <span className="text-cyan-400">✦</span>
           <span>DYNAMIC CONFLICT RESOLUTION</span>
           <span className="text-emerald-400">✦</span>
@@ -714,7 +714,7 @@ export default function LandingPage() {
           <span className="text-cyan-400">✦</span>
           <span>ZERO BLOCK BURSTS</span>
           <span className="text-emerald-400">✦</span>
-          <span>GEMINI MULTILINGUAL TRIAGE</span>
+          <span>AUTONOMOUS NLP DEFECT TRIAGE</span>
           <span className="text-cyan-400">✦</span>
           <span>DYNAMIC CONFLICT RESOLUTION</span>
           <span className="text-emerald-400">✦</span>

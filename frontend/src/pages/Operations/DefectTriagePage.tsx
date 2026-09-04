@@ -49,7 +49,7 @@ export default function DefectTriagePage() {
               <h1 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
                 <span>CROSS-DEPARTMENTAL DEFECT TRIAGE</span>
                 <span className="text-zinc-600">//</span>
-                <span className="text-primary font-mono text-xs">AI VOICE & TELEGRAPH INGESTION</span>
+                <span className="text-primary font-mono text-xs">AI VOICE &amp; TELEGRAPH INGESTION</span>
               </h1>
             </div>
             <p className="font-mono text-xs text-on-surface-variant">
@@ -63,7 +63,7 @@ export default function DefectTriagePage() {
               className="bg-primary hover:bg-primary/90 text-on-primary font-mono text-xs font-bold gap-1.5 cursor-pointer shadow-md"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>LOG DEFECT VIA GEMINI AI</span>
+              <span>LOG DEFECT VIA NEURAL AI</span>
             </Button>
 
             <Button
@@ -128,7 +128,7 @@ export default function DefectTriagePage() {
         </div>
       </div>
 
-      {/* Gemini AI Defect Modal */}
+      {/* Neural AI Defect Modal */}
       <AIDefectModal
         open={aiModalOpen}
         onOpenChange={setAiModalOpen}

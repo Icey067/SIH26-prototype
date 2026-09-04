@@ -59,89 +59,92 @@ export default function UserMetaCard() {
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-        <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+        <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-8">
           <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
+            <h4 className="mb-2 text-xl font-bold text-gray-800 dark:text-white/90 uppercase tracking-tight flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-cyan-400" />
+              <span>Duty Officer Operational Credentials</span>
             </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update your details to keep your profile up-to-date.
+            <p className="mb-6 text-xs text-gray-500 dark:text-gray-400 font-mono">
+              Statutory verification and digital sign-off authority registry conforming to Indian Railways G&amp;SR Section 4.14.
             </p>
           </div>
           <form className="flex flex-col">
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
+            <div className="custom-scrollbar max-h-[450px] overflow-y-auto px-2 pb-3 space-y-6">
               <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
+                <h5 className="mb-4 text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 border-b border-gray-200 dark:border-gray-800 pb-1">
+                  1. Operational Authority &amp; Terminals
                 </h5>
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-2">
                   <div>
-                    <Label>Facebook</Label>
+                    <Label>Control Desk Station</Label>
                     <Input
                       type="text"
-                      value="https://www.facebook.com/PimjoHQ"
+                      value="Prayagraj Control Room (Desk Console 04)"
                     />
                   </div>
 
                   <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value="https://x.com/PimjoHQ" />
+                    <Label>FOIS / COA Terminal ID</Label>
+                    <Input type="text" value={`FOIS-NCR-${badgeCode || "PRYJ-098"}`} />
                   </div>
 
                   <div>
-                    <Label>Linkedin</Label>
+                    <Label>Statutory Authority Level</Label>
                     <Input
                       type="text"
-                      value="https://www.linkedin.com/company/pimjo"
+                      value="G&SR Section 4.14 Authority Level-A"
                     />
                   </div>
 
                   <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value="https://instagram.com/PimjoHQ" />
+                    <Label>Private Number Prefix</Label>
+                    <Input type="text" value={`PN-${user?.privateNumberPrefix || "PRYJ"}-2026`} />
                   </div>
                 </div>
               </div>
-              <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
+
+              <div>
+                <h5 className="mb-4 text-xs font-mono font-bold uppercase tracking-wider text-emerald-400 border-b border-gray-200 dark:border-gray-800 pb-1">
+                  2. Official Railway Communications
                 </h5>
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value="User" />
+                    <Label>Officer Full Name</Label>
+                    <Input type="text" value={officerName} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value="User" />
+                    <Label>Designation</Label>
+                    <Input type="text" value={officerRole} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="text" value="user@railways.gov.in" />
+                    <Label>Official Railnet Email</Label>
+                    <Input type="text" value={user?.email || "controller.pryj@ncr.railnet.gov.in"} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Phone</Label>
-                    <Input type="text" value="+91 00000 00000" />
+                    <Label>Railway Direct Dial (RDD)</Label>
+                    <Input type="text" value="RDD: 88412 • +91 532 2230123" />
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Bio</Label>
-                    <Input type="text" value="Indian Railways Operations User" />
+                    <Label>Assigned Trunk Section</Label>
+                    <Input type="text" value="Ghaziabad (Km 0) to Kanpur Central (Km 440) Golden Corridor" />
                   </div>
                 </div>
               </div>
             </div>
+
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
               <Button size="sm" variant="outline" onClick={closeModal}>
                 Close
               </Button>
               <Button size="sm" onClick={handleSave}>
-                Save Changes
+                Save Officer Record
               </Button>
             </div>
           </form>

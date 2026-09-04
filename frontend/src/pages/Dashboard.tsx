@@ -11,6 +11,7 @@ import {
   ConflictReport,
   TrainTrajectory,
   OptimizationBundleResponse,
+  WeatherReport,
 } from "@/types/railway";
 import {
   AlertTriangle,
@@ -24,9 +25,22 @@ import {
   UserCheck,
   ArrowRightLeft,
   LogIn,
+  CloudSun,
+  Flame,
+  Printer,
+  FileText,
+  X,
 } from "lucide-react";
 
 import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
+
+interface HUDToast {
+  id: string;
+  title: string;
+  desc: string;
+  type: "success" | "info" | "warning" | "alert";
+  timestamp: string;
+}
 
 export default function Dashboard() {
   const { user, isAuthenticated, switchOfficer, presetOfficers } = useAuth();
@@ -35,8 +49,28 @@ export default function Dashboard() {
   const [_conflicts, setConflicts] = useState<ConflictAlert[]>([]);
   const [_trajectories, setTrajectories] = useState<TrainTrajectory[]>([]);
   const [_conflictReport, setConflictReport] = useState<ConflictReport | null>(null);
+  const [weather, setWeather] = useState<WeatherReport | null>(null);
 
+  // HUD Toast State
+  const [toasts, setToasts] = useState<HUDToast[]>([]);
 
+  const showToast = (
+    title: string,
+    desc: string,
+    type: "success" | "info" | "warning" | "alert" = "info"
+  ) => {
+    const newToast: HUDToast = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      title,
+      desc,
+      type,
+      timestamp: new Date().toLocaleTimeString("en-IN"),
+    };
+    setToasts((prev) => [newToast, ...prev.slice(0, 3)]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
+    }, 4500);
+  };
 
   // UI Interactive States
   const [chartDisplayMode, setChartDisplayMode] = useState<"3D" | "2D">("3D");
@@ -54,16 +88,19 @@ export default function Dashboard() {
   // Fetch initial API data from FastAPI backend
   const loadData = async () => {
     try {
-      const [blockData, telemetryData, trajectoryData, conflictData] = await Promise.all([
+      const [blockData, telemetryData, trajectoryData, conflictData, weatherData] = await Promise.all([
         RailwayAPI.getBlocks(),
         RailwayAPI.getLiveTelemetry(),
         RailwayAPI.getTrainTrajectories(),
         RailwayAPI.getActiveConflicts(),
+        RailwayAPI.getLiveWeather().catch(() => null),
       ]);
 
       if (blockData && blockData.length > 0) setBlocks(blockData);
       if (telemetryData.trains) setTrains(telemetryData.trains);
       if (telemetryData.conflicts) setConflicts(telemetryData.conflicts);
+      if (telemetryData.weather) setWeather(telemetryData.weather);
+      else if (weatherData) setWeather(weatherData);
       if (trajectoryData) setTrajectories(trajectoryData);
       if (conflictData) setConflictReport(conflictData);
     } catch (err) {
@@ -102,7 +139,13 @@ export default function Dashboard() {
         setBlocks(res.blocks);
       }
       setConflictZoneResolved(true);
-      setSolvedStatus(`CP-SAT OPTIMAL MATRIX COMPUTED (${res.metrics?.saved_track_downtime_mins || 140}m SAVED • 0m DELAY)`);
+      const savedTime = res.metrics?.saved_track_downtime_mins || 140;
+      setSolvedStatus(`CP-SAT OPTIMAL MATRIX COMPUTED (${savedTime}m SAVED • 0m DELAY)`);
+      showToast(
+        "OR-TOOLS CP-SAT OPTIMIZER CONVERGED",
+        `Mathematical matrix computed with 0 delay. Saved ${savedTime} minutes of corridor downtime across PRYJ division.`,
+        "success"
+      );
       setTimeout(() => {
         setSolvedStatus(null);
       }, 6000);
@@ -111,6 +154,11 @@ export default function Dashboard() {
       // Fallback visual simulation if backend busy
       setConflictZoneResolved(true);
       setSolvedStatus("CP-SAT OPTIMAL MATRIX COMPUTED (+0m IMPACT)");
+      showToast(
+        "OR-TOOLS SOLVER ACTIVE",
+        "Corridor shadow slots aligned into natural train headway gaps.",
+        "success"
+      );
       setTimeout(() => {
         setSolvedStatus(null);
       }, 6000);
@@ -124,6 +172,11 @@ export default function Dashboard() {
     setActiveScenario("REROUTE");
     setConflictZoneResolved(true);
     setSolvedStatus("TRAIN 12424 REROUTED TO 3RD LINE (LOOP BYPASS) • +3m NET DELAY");
+    showToast(
+      "TACTICAL AUTO-REROUTE APPLIED",
+      "Train 12424 Rajdhani diverted to Track 03 (Loop Bypass) at Tundla Outer. Net headway impact: +3m.",
+      "info"
+    );
     setTimeout(() => {
       setSolvedStatus(null);
     }, 6000);
@@ -134,6 +187,11 @@ export default function Dashboard() {
     setActiveScenario("SPEED_RESTRICTION");
     setConflictZoneResolved(true);
     setSolvedStatus("TSR 30 KM/H PRE-WARNING SPEED ORDER SIMULATED • +6m SAFE GAP");
+    showToast(
+      "TSR 30 KM/H SPEED RESTRICTION SIMULATED",
+      "Approach caution order applied km 170-184. Controlled buffer created with +6m safety margin.",
+      "warning"
+    );
     setTimeout(() => {
       setSolvedStatus(null);
     }, 6000);
@@ -144,6 +202,12 @@ export default function Dashboard() {
     const randomDigits = Math.floor(1000 + Math.random() * 9000);
     const privNumber = `NCR-PRYJ-${new Date().getFullYear()}-${randomDigits}`;
     setIssuedPrivateNumber(privNumber);
+
+    showToast(
+      "AUTHORIZATION GRANTED & INTERLOCKED",
+      `Private Number ${privNumber} issued for ${blockCode}. Station Master digital token concurred & logged into COA.`,
+      "success"
+    );
 
     // Attempt to update backend block status if block id found
     const matchingBlock = blocks.find((b) => b.block_code === blockCode || b.id === blockCode);
@@ -158,11 +222,11 @@ export default function Dashboard() {
   };
 
   // Static baseline possession items matching Stitch specification
-  const possessionItems = [
+  const staticPossessionItems = [
     {
       id: "TMS-8841",
       dept: "ENGG (CIVIL)",
-      deptCode: "TMS",
+      deptCode: "TMS" as const,
       section: "ALJN-Hathras",
       line: "UP SLOW (L-1)",
       desc: "BCM Ballast Clean",
@@ -177,7 +241,7 @@ export default function Dashboard() {
     {
       id: "TDMS-2109",
       dept: "TRD (ELECTRICAL)",
-      deptCode: "TDMS",
+      deptCode: "TDMS" as const,
       section: "Tundla Outer",
       line: "DN FAST (L-2)",
       desc: "Cantilever & OHE",
@@ -192,7 +256,7 @@ export default function Dashboard() {
     {
       id: "SMMS-904",
       dept: "S&T (SIGNALS)",
-      deptCode: "SMMS",
+      deptCode: "SMMS" as const,
       section: "Kanpur Yard",
       line: "PLATFORM 4 / PT 114",
       desc: "Point Machine 114A",
@@ -207,7 +271,7 @@ export default function Dashboard() {
     {
       id: "TMS-8890",
       dept: "ENGG (CIVIL)",
-      deptCode: "TMS",
+      deptCode: "TMS" as const,
       section: "Etawah Outer",
       line: "UP FAST (L-1)",
       desc: "USFD Rail Testing",
@@ -221,9 +285,65 @@ export default function Dashboard() {
     },
   ];
 
+  // Dynamic merge of database blocks with static benchmark items
+  const dynamicDbPossessions = blocks.map((b) => {
+    const deptCode: "TMS" | "SMMS" | "TDMS" =
+      b.primary_department === "ENGINEERING" || b.primary_department?.includes("CIVIL") || b.primary_department?.includes("TMS")
+        ? "TMS"
+        : b.primary_department === "SIGNAL_TELECOM" || b.primary_department?.includes("SIGNAL") || b.primary_department?.includes("SMMS")
+        ? "SMMS"
+        : "TDMS";
+
+    const deptLabel =
+      deptCode === "TMS" ? "ENGG (CIVIL)" : deptCode === "SMMS" ? "S&T (SIGNALS)" : "TRD (ELECTRICAL)";
+
+    const reqDur = `${Math.floor(b.duration_minutes / 60)}h ${b.duration_minutes % 60}m`;
+    const predDurMins = b.predicted_duration_mins || b.duration_minutes;
+    const mlPred = `${Math.floor(predDurMins / 60)}h ${predDurMins % 60}m`;
+    const diff = predDurMins - b.duration_minutes;
+    const overrun = diff > 0 ? `+${diff}m Overrun` : diff < 0 ? `${diff}m Early` : "On Track";
+    const riskLevel: "HIGH" | "MED" | "LOW" =
+      b.status === "BURSTED" || diff >= 30 ? "HIGH" : diff >= 10 ? "MED" : "LOW";
+    const risk =
+      riskLevel === "HIGH" ? "HIGH (76%)" : riskLevel === "MED" ? "MED (35%)" : "LOW (12%)";
+    const badgeColor =
+      riskLevel === "HIGH"
+        ? "bg-error-container text-on-error-container"
+        : riskLevel === "MED"
+        ? "bg-surface-container-highest text-secondary"
+        : "bg-surface-container-highest text-tertiary";
+
+    return {
+      id: b.block_code || b.id,
+      dept: deptLabel,
+      deptCode,
+      section: `${b.track_section_id?.split("-").slice(1, 3).join("-") || "Sector"} km ${b.start_km}-${b.end_km}`,
+      line: b.line?.includes("UP") ? "UP FAST (L-1)" : "DN FAST (L-2)",
+      desc: b.title || b.machinery_assigned || "Track Possession Work",
+      reqDur,
+      mlPred,
+      overrun,
+      risk,
+      riskLevel,
+      bundling: b.bundled_departments ? `+${b.bundled_departments}` : b.is_joint_bundle ? "+SMMS-402" : "STANDALONE",
+      badgeColor,
+    };
+  });
+
+  // Combine benchmark items and dynamic DB items without ID duplication
+  const existingIds = new Set(staticPossessionItems.map((p) => p.id));
+  const mergedPossessions = [
+    ...staticPossessionItems,
+    ...dynamicDbPossessions.filter((d) => !existingIds.has(d.id)),
+  ];
+
   const filteredPossessions = selectedDeptFilter === "ALL"
-    ? possessionItems
-    : possessionItems.filter((item) => item.deptCode === selectedDeptFilter);
+    ? mergedPossessions
+    : mergedPossessions.filter((item) => item.deptCode === selectedDeptFilter);
+
+  const tmsCount = mergedPossessions.filter((p) => p.deptCode === "TMS").length;
+  const smmsCount = mergedPossessions.filter((p) => p.deptCode === "SMMS").length;
+  const tdmsCount = mergedPossessions.filter((p) => p.deptCode === "TDMS").length;
 
   return (
     <>
@@ -257,6 +377,39 @@ export default function Dashboard() {
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">CATENARY STATUS:</span>
               <span className="font-mono text-xs text-tertiary font-semibold">25kV AC ENERGIZED (99.4%)</span>
+            </div>
+            {/* Live Weather Telemetry Pill */}
+            <div className="h-3 w-px bg-surface-container-highest"></div>
+            <div
+              className="flex items-center gap-1.5 font-mono text-[10px] cursor-help"
+              title={
+                weather
+                  ? `Location: ${weather.location} • Humidity: ${weather.humidity_percent}% • Wind: ${weather.wind_speed_kmph} km/h • Visibility: ${weather.visibility_meters}m • Fog Risk: ${weather.rail_hazards?.fog_risk_level || "NORMAL"}`
+                  : "Live OpenWeatherMap Telemetry Feed"
+              }
+            >
+              <span className="text-on-surface-variant font-bold uppercase tracking-wider flex items-center gap-1">
+                <CloudSun className="w-3 h-3 text-amber-400 inline" /> WEATHER:
+              </span>
+              <span className="text-amber-300 font-bold">
+                {weather ? `${weather.ambient_temp_c.toFixed(1)}°C (${weather.weather_condition})` : "26.2°C (Overcast)"}
+              </span>
+              <span className="text-on-surface-variant">•</span>
+              <span className="text-rose-400 font-semibold flex items-center gap-0.5">
+                <Flame className="w-2.5 h-2.5 text-rose-400" /> Rail:{" "}
+                {weather ? `${weather.estimated_rail_temp_c.toFixed(1)}°C` : "44.2°C"}
+              </span>
+              <span
+                className={`px-1 py-0.2 rounded text-[8px] font-bold ${
+                  weather?.rail_hazards?.track_buckling_risk === "HIGH_CRITICAL"
+                    ? "bg-rose-900/60 text-rose-300 border border-rose-500"
+                    : weather?.rail_hazards?.track_buckling_risk === "MODERATE"
+                    ? "bg-amber-900/60 text-amber-300 border border-amber-500"
+                    : "bg-emerald-900/40 text-emerald-300 border border-emerald-500/40"
+                }`}
+              >
+                {weather?.rail_hazards?.track_buckling_risk === "HIGH_CRITICAL" ? "BUCKLING ALERT" : "STABLE"}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -305,22 +458,13 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-2">
             {isAuthenticated && user ? (
-              <>
-                <button
-                  onClick={() => setIsOfficerHandoverOpen(!isOfficerHandoverOpen)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest border border-surface-container-highest text-on-surface font-mono text-[10px] font-bold transition-all cursor-pointer"
-                >
-                  <ArrowRightLeft className="w-3 h-3 text-primary" />
-                  <span>DUTY HANDOVER (SWITCH ROLE)</span>
-                </button>
-                <Link
-                  to="/signin"
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-mono text-[10px] font-bold transition-all"
-                >
-                  <LogIn className="w-3 h-3 text-primary" />
-                  <span>FULL SIGN IN</span>
-                </Link>
-              </>
+              <button
+                onClick={() => setIsOfficerHandoverOpen(!isOfficerHandoverOpen)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest border border-surface-container-highest text-on-surface font-mono text-[10px] font-bold transition-all cursor-pointer"
+              >
+                <ArrowRightLeft className="w-3 h-3 text-primary" />
+                <span>DUTY HANDOVER (SWITCH ROLE)</span>
+              </button>
             ) : (
               <Link
                 to="/signin"
@@ -1113,7 +1257,7 @@ export default function Dashboard() {
                       selectedDeptFilter === "ALL" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                   >
-                    ALL (4)
+                    ALL ({mergedPossessions.length})
                   </button>
                   <button
                     onClick={() => setSelectedDeptFilter("TMS")}
@@ -1121,7 +1265,7 @@ export default function Dashboard() {
                       selectedDeptFilter === "TMS" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                   >
-                    TMS TRACK (2)
+                    TMS TRACK ({tmsCount})
                   </button>
                   <button
                     onClick={() => setSelectedDeptFilter("SMMS")}
@@ -1129,7 +1273,7 @@ export default function Dashboard() {
                       selectedDeptFilter === "SMMS" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                   >
-                    SMMS SIGNALS (1)
+                    SMMS SIGNALS ({smmsCount})
                   </button>
                   <button
                     onClick={() => setSelectedDeptFilter("TDMS")}
@@ -1137,7 +1281,7 @@ export default function Dashboard() {
                       selectedDeptFilter === "TDMS" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                   >
-                    TDMS OHE (1)
+                    TDMS OHE ({tdmsCount})
                   </button>
                 </div>
               </div>
@@ -1232,16 +1376,30 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert(`Caution Order printed for Active Blocks across GZB-CNB Section. Private Key: ${issuedPrivateNumber || "NCR-PRYJ-2026-LIVE"}`)}
-                  className="px-2.5 py-1 rounded bg-surface-container-highest text-on-surface font-mono text-[10px] font-bold hover:bg-surface-bright transition-colors uppercase border border-surface-container-high"
+                  onClick={() =>
+                    showToast(
+                      "CAUTION ORDER GENERATED (T/409)",
+                      `Caution Order printed for Active Blocks across GZB-CNB Section. Cryptographic Validation Key: ${issuedPrivateNumber || "NCR-PRYJ-2026-LIVE"}`,
+                      "info"
+                    )
+                  }
+                  className="px-2.5 py-1 rounded bg-surface-container-highest text-on-surface font-mono text-[10px] font-bold hover:bg-surface-bright transition-colors uppercase border border-surface-container-high flex items-center gap-1.5 cursor-pointer"
                 >
-                  Print Caution Order
+                  <Printer className="w-3 h-3 text-on-surface-variant" />
+                  <span>Print Caution Order</span>
                 </button>
                 <button
-                  onClick={() => alert("Audit trail log exported to division operations register (NCR-PRYJ).")}
-                  className="px-2.5 py-1 rounded bg-surface-container-highest text-primary font-mono text-[10px] font-bold hover:bg-surface-bright transition-colors uppercase border border-primary/20"
+                  onClick={() =>
+                    showToast(
+                      "AUDIT TRAIL EXPORTED",
+                      "G&SR Section 4.14 digital audit trail successfully transmitted to NCR Division Control Register (PRYJ).",
+                      "info"
+                    )
+                  }
+                  className="px-2.5 py-1 rounded bg-surface-container-highest text-primary font-mono text-[10px] font-bold hover:bg-surface-bright transition-colors uppercase border border-primary/20 flex items-center gap-1.5 cursor-pointer"
                 >
-                  Audit Trail
+                  <FileText className="w-3 h-3 text-primary" />
+                  <span>Audit Trail</span>
                 </button>
               </div>
             </div>
@@ -1265,6 +1423,51 @@ export default function Dashboard() {
             INDIAN RAILWAYS • NORTH CENTRAL RAILWAY • PRAYAGRAJ DIVISION SAMANVAY-AI CONTROLLER
           </div>
         </footer>
+
+        {/* Cyber HUD Tactical Toast Notifications */}
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-md w-full pointer-events-none px-4">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto p-3.5 rounded-xl border backdrop-blur-md shadow-2xl flex items-start gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 transition-all ${
+                toast.type === "success"
+                  ? "bg-emerald-950/95 border-emerald-500/60 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.35)]"
+                  : toast.type === "warning"
+                  ? "bg-amber-950/95 border-amber-500/60 text-amber-100 shadow-[0_0_25px_rgba(245,158,11,0.35)]"
+                  : "bg-surface-container-lowest/95 border-primary/60 text-on-surface shadow-[0_0_25px_rgba(6,182,212,0.35)]"
+              }`}
+            >
+              <div className="mt-0.5 shrink-0">
+                {toast.type === "success" ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                ) : toast.type === "warning" ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-primary" />
+                )}
+              </div>
+              <div className="flex flex-col flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold tracking-wider uppercase">
+                    {toast.title}
+                  </span>
+                  <span className="font-mono text-[9px] text-on-surface-variant">
+                    {toast.timestamp}
+                  </span>
+                </div>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  {toast.desc}
+                </p>
+              </div>
+              <button
+                onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+                className="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );

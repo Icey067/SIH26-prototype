@@ -26,12 +26,48 @@ class Settings(BaseSettings):
 
     # External Live APIs
     GEMINI_API_KEY: Union[str, None] = None
+    GEMINI_API_KEYS: Union[str, None] = None
     GEMINI_MODEL: str = "gemini-1.5-pro"
     RAPIDAPI_KEY: Union[str, None] = None
+    RAPIDAPI_KEYS: Union[str, None] = None
     RAPIDAPI_HOST: str = "indian-railways-info.p.rapidapi.com"
     OPENWEATHER_API_KEY: Union[str, None] = None
+    OPENWEATHER_API_KEYS: Union[str, None] = None
     SUPABASE_URL: Union[str, None] = None
     SUPABASE_KEY: Union[str, None] = None
+
+    @property
+    def gemini_keys_list(self) -> List[str]:
+        keys = []
+        for source in [self.GEMINI_API_KEY, self.GEMINI_API_KEYS]:
+            if source:
+                for k in source.replace(";", ",").replace("\n", ",").split(","):
+                    c = k.strip().strip("'\"")
+                    if c and c not in keys:
+                        keys.append(c)
+        return keys
+
+    @property
+    def openweather_keys_list(self) -> List[str]:
+        keys = []
+        for source in [self.OPENWEATHER_API_KEY, self.OPENWEATHER_API_KEYS]:
+            if source:
+                for k in source.replace(";", ",").replace("\n", ",").split(","):
+                    c = k.strip().strip("'\"")
+                    if c and c not in keys:
+                        keys.append(c)
+        return keys
+
+    @property
+    def rapidapi_keys_list(self) -> List[str]:
+        keys = []
+        for source in [self.RAPIDAPI_KEY, self.RAPIDAPI_KEYS]:
+            if source:
+                for k in source.replace(";", ",").replace("\n", ",").split(","):
+                    c = k.strip().strip("'\"")
+                    if c and c not in keys:
+                        keys.append(c)
+        return keys
 
     model_config = SettingsConfigDict(
         env_file=".env",

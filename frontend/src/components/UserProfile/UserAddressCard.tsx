@@ -1,59 +1,96 @@
+import { useState } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { MapPin, Building2, Radio, PhoneCall } from "lucide-react";
 
 export default function UserAddressCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
+  const [addressData, setAddressData] = useState({
+    country: "India",
+    zonalHq: "North Central Railway (NCR) Zonal HQ, Subedarganj",
+    cityState: "Prayagraj, Uttar Pradesh, India",
+    postalCode: "211015",
+    divisionCode: "NCR-PRYJ-26027",
+    interlockingTower: "Tundla (TDL) - Kanpur (CNB) Central RRI Tower",
+    rddLine: "RDD: 22401 / MTNL: 0532-2230489",
+    emergencyStation: "PRYJ Section Control Desk #4"
+  });
+
+  const handleSave = (e?: React.FormEvent) => {
+    if (e?.preventDefault) {
+      e.preventDefault();
+    }
     closeModal();
   };
+
   return (
     <>
-      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
+      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6 bg-white dark:bg-gray-900/60">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-              Address
+          <div className="w-full">
+            <h4 className="text-lg font-bold text-gray-800 dark:text-white/90 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              <span>Zonal Headquarters & Station Post</span>
             </h4>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32 font-mono">
               <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Country
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold flex items-center gap-1">
+                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                  Zonal HQ / Complex
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  India
+                <p className="text-sm font-semibold text-gray-800 dark:text-white/90 font-sans">
+                  {addressData.zonalHq}
                 </p>
               </div>
 
               <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  City/State
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold flex items-center gap-1">
+                  <Radio className="w-3.5 h-3.5 text-gray-400" />
+                  Interlocking Tower
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Prayagraj, Uttar Pradesh, India
-                </p>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Postal Code
-                </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  211001
+                <p className="text-sm font-semibold text-gray-800 dark:text-white/90 font-sans">
+                  {addressData.interlockingTower}
                 </p>
               </div>
 
               <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Division Code
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+                  City / State / PIN
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  NCR-PRYJ-26027
+                <p className="text-sm font-semibold text-gray-800 dark:text-white/90 font-sans">
+                  {addressData.cityState} - {addressData.postalCode}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+                  Division & Section Code
+                </p>
+                <p className="text-sm font-semibold text-primary">
+                  {addressData.divisionCode}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold flex items-center gap-1">
+                  <PhoneCall className="w-3.5 h-3.5 text-gray-400" />
+                  Railnet Direct Dial (RDD) / Phone
+                </p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  {addressData.rddLine}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+                  Emergency Desk Position
+                </p>
+                <p className="text-sm font-semibold text-tertiary">
+                  {addressData.emergencyStation}
                 </p>
               </div>
             </div>
@@ -61,12 +98,12 @@ export default function UserAddressCard() {
 
           <button
             onClick={openModal}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03] dark:hover:text-gray-100 lg:inline-flex lg:w-auto"
           >
             <svg
               className="fill-current"
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 18 18"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -78,50 +115,85 @@ export default function UserAddressCard() {
                 fill=""
               />
             </svg>
-            Edit
+            Edit Post Details
           </button>
         </div>
       </div>
+
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-        <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
+        <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-8">
           <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Address
+            <h4 className="mb-2 text-xl font-bold text-gray-800 dark:text-white/90 font-mono">
+              Edit Station & Post Registry
             </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update your details to keep your profile up-to-date.
+            <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">
+              Update official posting, Interlocking tower, and emergency lines.
             </p>
           </div>
-          <form className="flex flex-col">
-            <div className="px-2 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+          <form onSubmit={handleSave} className="flex flex-col">
+            <div className="px-2 space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div>
-                  <Label>Country</Label>
-                  <Input type="text" value="India" />
+                  <Label>Zonal HQ / Railway Office</Label>
+                  <Input
+                    type="text"
+                    value={addressData.zonalHq}
+                    onChange={(e) => setAddressData({ ...addressData, zonalHq: e.target.value })}
+                  />
                 </div>
 
                 <div>
-                  <Label>City/State</Label>
-                  <Input type="text" value="Prayagraj, Uttar Pradesh, India" />
+                  <Label>Interlocking Tower / Post</Label>
+                  <Input
+                    type="text"
+                    value={addressData.interlockingTower}
+                    onChange={(e) => setAddressData({ ...addressData, interlockingTower: e.target.value })}
+                  />
                 </div>
 
                 <div>
-                  <Label>Postal Code</Label>
-                  <Input type="text" value="211001" />
+                  <Label>City / State</Label>
+                  <Input
+                    type="text"
+                    value={addressData.cityState}
+                    onChange={(e) => setAddressData({ ...addressData, cityState: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label>PIN Code</Label>
+                  <Input
+                    type="text"
+                    value={addressData.postalCode}
+                    onChange={(e) => setAddressData({ ...addressData, postalCode: e.target.value })}
+                  />
                 </div>
 
                 <div>
                   <Label>Division Code</Label>
-                  <Input type="text" value="NCR-PRYJ-26027" />
+                  <Input
+                    type="text"
+                    value={addressData.divisionCode}
+                    onChange={(e) => setAddressData({ ...addressData, divisionCode: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label>RDD Hotline / Phone</Label>
+                  <Input
+                    type="text"
+                    value={addressData.rddLine}
+                    onChange={(e) => setAddressData({ ...addressData, rddLine: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
               <Button size="sm" variant="outline" onClick={closeModal}>
-                Close
+                Cancel
               </Button>
               <Button size="sm" onClick={handleSave}>
-                Save Changes
+                Save Updates
               </Button>
             </div>
           </form>
