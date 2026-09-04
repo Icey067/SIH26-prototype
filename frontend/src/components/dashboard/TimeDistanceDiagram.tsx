@@ -10,6 +10,9 @@ interface TimeDistanceDiagramProps {
   blocks: MaintenanceBlock[];
   conflicts: ConflictItem[];
   onOpenGrantModal?: (block: MaintenanceBlock) => void;
+  activeScenario?: "NONE" | "CP_SAT" | "REROUTE" | "SPEED_RESTRICTION";
+  rerouteActive?: boolean;
+  speedRestrictionActive?: boolean;
 }
 
 const STATIONS = [
@@ -26,6 +29,9 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
   blocks,
   conflicts,
   onOpenGrantModal,
+  activeScenario = "NONE",
+  rerouteActive = false,
+  speedRestrictionActive = false,
 }) => {
   const [selectedDirection, setSelectedDirection] = useState<"ALL" | "DN" | "UP">("ALL");
   const [hoveredTrain, setHoveredTrain] = useState<TrainTrajectory | null>(null);
@@ -291,6 +297,24 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
               pathD += ` L ${scaleX(pts[i].minute)} ${scaleY(pts[i].km)}`;
             }
 
+            const is12424 = train.train_id.includes("12424") || (train as any).train_name?.toLowerCase().includes("rajdhani");
+
+            const strokeColor = is12424 && rerouteActive
+              ? "#10b981"
+              : is12424 && speedRestrictionActive
+              ? "#f59e0b"
+              : is12424 && activeScenario === "CP_SAT"
+              ? "#00f0ff"
+              : train.color || "#06b6d4";
+
+            const trainLabel = is12424 && rerouteActive
+              ? "12424 (3RD LINE)"
+              : is12424 && speedRestrictionActive
+              ? "12424 (TSR 30)"
+              : is12424 && activeScenario === "CP_SAT"
+              ? "12424 (CP-SAT)"
+              : train.train_id;
+
             return (
               <g
                 key={train.train_id}
@@ -309,8 +333,8 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={train.color || "#06b6d4"}
-                  strokeWidth={isHovered ? "3.5" : "1.8"}
+                  stroke={strokeColor}
+                  strokeWidth={isHovered || is12424 ? "3.5" : "1.8"}
                   strokeOpacity={isHovered ? 1.0 : 0.85}
                   className="transition-all duration-150"
                 />
@@ -318,24 +342,24 @@ export const TimeDistanceDiagram: React.FC<TimeDistanceDiagramProps> = ({
                 <circle
                   cx={scaleX(pts[0].minute)}
                   cy={scaleY(pts[0].km)}
-                  r={isHovered ? 4 : 2.5}
-                  fill={train.color}
+                  r={isHovered || is12424 ? 4 : 2.5}
+                  fill={strokeColor}
                 />
                 <circle
                   cx={scaleX(pts[pts.length - 1].minute)}
                   cy={scaleY(pts[pts.length - 1].km)}
-                  r={isHovered ? 4 : 2.5}
-                  fill={train.color}
+                  r={isHovered || is12424 ? 4 : 2.5}
+                  fill={strokeColor}
                 />
                 {/* Label near departure */}
                 <text
                   x={scaleX(pts[0].minute) + 4}
                   y={scaleY(pts[0].km) + (train.direction === "DN" ? -4 : 10)}
                   className={`text-[8px] font-mono font-bold ${
-                    isHovered ? "fill-white" : "fill-gray-400"
+                    isHovered || is12424 ? (rerouteActive ? "fill-emerald-300 font-black" : speedRestrictionActive ? "fill-amber-300 font-black" : "fill-white") : "fill-gray-400"
                   }`}
                 >
-                  {train.train_id}
+                  {trainLabel}
                 </text>
               </g>
             );

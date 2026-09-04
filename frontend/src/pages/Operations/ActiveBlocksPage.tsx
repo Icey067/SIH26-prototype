@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "@/components/common/PageMeta";
 import { ActiveBlocksCard } from "@/components/dashboard/ActiveBlocksCard";
 import { BlockGrantModal } from "@/components/dashboard/BlockGrantModal";
 import { BlockRequestModal } from "@/components/dashboard/BlockRequestModal";
 import { RailwayAPI } from "@/services/api";
 import { MaintenanceBlock } from "@/types/railway";
-import { Box, Plus, RefreshCw, Layers, ShieldCheck, CheckCircle2, Clock } from "lucide-react";
+import { Box, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export default function ActiveBlocksPage() {
   const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
@@ -32,11 +31,6 @@ export default function ActiveBlocksPage() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const handleOpenGrant = (block: MaintenanceBlock) => {
-    setSelectedBlockForGrant(block);
-    setGrantModalOpen(true);
-  };
 
   return (
     <>
@@ -90,7 +84,7 @@ export default function ActiveBlocksPage() {
               ACTIVE GRANTED BLOCKS
             </span>
             <div className="text-3xl font-black font-mono text-white">
-              {blocks.filter((b) => b.status === "GRANTED" || b.status === "ACTIVE").length}
+              {blocks.filter((b) => b.status === "APPROVED" || b.status === "CONTROLLER_APPROVED" || b.status === "IN_PROGRESS").length}
             </div>
             <p className="text-[11px] text-on-surface-variant font-mono">Live possession on trunk lines</p>
           </Card>
@@ -100,7 +94,7 @@ export default function ActiveBlocksPage() {
               PENDING SECTION CONTROLLER PN
             </span>
             <div className="text-3xl font-black font-mono text-secondary">
-              {blocks.filter((b) => b.status === "REQUESTED" || b.status === "PENDING").length}
+              {blocks.filter((b) => b.status === "REQUESTED" || b.status === "PENDING" || b.status === "DRAFT").length}
             </div>
             <p className="text-[11px] text-on-surface-variant font-mono">Requires Private Number exchange</p>
           </Card>
@@ -131,7 +125,6 @@ export default function ActiveBlocksPage() {
           <ActiveBlocksCard
             blocks={blocks}
             onRefresh={loadData}
-            onOpenGrantModal={handleOpenGrant}
           />
         </div>
       </div>
@@ -140,8 +133,14 @@ export default function ActiveBlocksPage() {
       {selectedBlockForGrant && (
         <BlockGrantModal
           block={selectedBlockForGrant}
-          isOpen={grantModalOpen}
-          onClose={() => {
+          open={grantModalOpen}
+          onOpenChange={(open) => {
+            setGrantModalOpen(open);
+            if (!open) {
+              setSelectedBlockForGrant(null);
+            }
+          }}
+          onBlockGranted={() => {
             setGrantModalOpen(false);
             setSelectedBlockForGrant(null);
             loadData();
@@ -151,8 +150,14 @@ export default function ActiveBlocksPage() {
 
       {/* Request Modal */}
       <BlockRequestModal
-        isOpen={requestModalOpen}
-        onClose={() => {
+        open={requestModalOpen}
+        onOpenChange={(open) => {
+          setRequestModalOpen(open);
+          if (!open) {
+            loadData();
+          }
+        }}
+        onBlockCreated={() => {
           setRequestModalOpen(false);
           loadData();
         }}
@@ -160,3 +165,4 @@ export default function ActiveBlocksPage() {
     </>
   );
 }
+

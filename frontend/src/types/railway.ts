@@ -268,3 +268,19 @@ export interface OptimizationBundleResponse {
     asset_availability_gain_pct: number;
   };
 }
+
+export interface WeatherTelemetry {
+  station_code?: string;
+  station_name?: string;
+  ambient_temp_c?: number;
+  rail_temp_c?: number;
+  rail_stress_status?: string;
+  humidity_pct?: number;
+  wind_speed_kmh?: number;
+  visibility_meters?: number;
+  caution_orders_active?: number;
+  sensor_status?: string;
+  [key: string]: any;
+}
+
+

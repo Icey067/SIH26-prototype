@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "@/components/common/PageMeta";
 import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
 import { TimeDistanceDiagram } from "@/components/dashboard/TimeDistanceDiagram";
 import { GanttTimeline } from "@/components/dashboard/GanttTimeline";
+import { BlockGrantModal } from "@/components/dashboard/BlockGrantModal";
 import { RailwayAPI } from "@/services/api";
-import { TrainTrajectory, MaintenanceBlock, ConflictItem, ConflictReport } from "@/types/railway";
-import { Calendar, Box, Eye, Layers, RefreshCw, AlertTriangle } from "lucide-react";
+import { TrainTrajectory, MaintenanceBlock, ConflictItem } from "@/types/railway";
+import { Calendar, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function TimetableGanttPage() {
   const [trajectories, setTrajectories] = useState<TrainTrajectory[]>([]);
@@ -15,6 +16,9 @@ export default function TimetableGanttPage() {
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [activeTab, setActiveTab] = useState<"3D" | "2D" | "GANTT">("3D");
   const [loading, setLoading] = useState<boolean>(true);
+  const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
+  const [selectedBlockForGrant, setSelectedBlockForGrant] = useState<MaintenanceBlock | null>(null);
+  const [grantModalOpen, setGrantModalOpen] = useState<boolean>(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -38,6 +42,18 @@ export default function TimetableGanttPage() {
     loadData();
   }, []);
 
+  const handleRunOptimizer = async () => {
+    setIsOptimizing(true);
+    try {
+      await RailwayAPI.runOptimizationBundle("NCR-GZB-TDL-UP", "UP");
+      await loadData();
+    } catch (err) {
+      console.error("Error optimizing timetable:", err);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   return (
     <>
       <PageMeta
@@ -52,13 +68,13 @@ export default function TimetableGanttPage() {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" />
               <h1 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
-                <span>TIMETABLE GANTT & 3D SPACE-TIME MATRIX</span>
+                <span>TIMETABLE GANTT & 3D MATRIX</span>
                 <span className="text-zinc-600">//</span>
-                <span className="text-primary font-mono text-xs">DYNAMIC TRAJECTORIES</span>
+                <span className="text-primary font-mono text-xs">MAREY-CHAUVEAU COCKPIT</span>
               </h1>
             </div>
             <p className="font-mono text-xs text-on-surface-variant">
-              NCR PRAYAGRAJ DIVISION • 440 KM TRUNK CORRIDOR • CONFLICT-FREE HEADWAY ORCHESTRATION
+              NCR PRAYAGRAJ DIVISION • TIME-DISTANCE STRING CHART & MULTI-CORRIDOR OVERLAYS
             </p>
           </div>
 
@@ -72,7 +88,7 @@ export default function TimetableGanttPage() {
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
-                3D SPACE-TIME MATRIX
+                3D WEBGL TWIN
               </button>
               <button
                 onClick={() => setActiveTab("2D")}
@@ -127,7 +143,15 @@ export default function TimetableGanttPage() {
 
         {activeTab === "GANTT" && (
           <div className="rounded bg-surface-container-low border border-surface-container-high p-4 shadow-xl">
-            <GanttTimeline blocks={blocks} />
+            <GanttTimeline
+              blocks={blocks}
+              onOpenGrantModal={(block) => {
+                setSelectedBlockForGrant(block);
+                setGrantModalOpen(true);
+              }}
+              onRunOptimizer={handleRunOptimizer}
+              isOptimizing={isOptimizing}
+            />
           </div>
         )}
 
@@ -150,14 +174,31 @@ export default function TimetableGanttPage() {
           </Card>
 
           <Card className="bg-surface-container-low border-surface-container-high text-on-surface p-4 flex flex-col gap-1">
-            <span className="font-mono text-[10px] text-amber-400 uppercase font-bold tracking-wider">
-              ACTIVE POSSESSION FOOTPRINT
+            <span className="font-mono text-[10px] text-secondary uppercase font-bold tracking-wider">
+              TOTAL DELAY MITIGATED
             </span>
-            <div className="text-3xl font-black font-mono text-amber-400">02 ZONES</div>
-            <p className="text-[11px] text-on-surface-variant font-mono">Block A-14 & Block B-09 locked</p>
+            <div className="text-3xl font-black font-mono text-secondary">0 MIN</div>
+            <p className="text-[11px] text-on-surface-variant font-mono">Predicted zero disruption envelope</p>
           </Card>
         </div>
       </div>
+
+      {/* Grant Modal */}
+      {selectedBlockForGrant && (
+        <BlockGrantModal
+          block={selectedBlockForGrant}
+          open={grantModalOpen}
+          onOpenChange={(open) => {
+            setGrantModalOpen(open);
+            if (!open) setSelectedBlockForGrant(null);
+          }}
+          onBlockGranted={() => {
+            setGrantModalOpen(false);
+            setSelectedBlockForGrant(null);
+            loadData();
+          }}
+        />
+      )}
     </>
   );
 }

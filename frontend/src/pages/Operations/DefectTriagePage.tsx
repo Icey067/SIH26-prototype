@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "@/components/common/PageMeta";
 import { DefectMatrix } from "@/components/dashboard/DefectMatrix";
 import { AIDefectModal } from "@/components/dashboard/AIDefectModal";
 import { RailwayAPI } from "@/services/api";
 import { Defect } from "@/types/railway";
-import { List, Sparkles, RefreshCw, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { List, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export default function DefectTriagePage() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -48,13 +47,13 @@ export default function DefectTriagePage() {
             <div className="flex items-center gap-2">
               <List className="w-4 h-4 text-primary" />
               <h1 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
-                <span>DEFECT TRIAGE MATRIX</span>
+                <span>CROSS-DEPARTMENTAL DEFECT TRIAGE</span>
                 <span className="text-zinc-600">//</span>
-                <span className="text-primary font-mono text-xs">GEMINI MULTILINGUAL REASONING</span>
+                <span className="text-primary font-mono text-xs">AI VOICE & TELEGRAPH INGESTION</span>
               </h1>
             </div>
             <p className="font-mono text-xs text-on-surface-variant">
-              ACOUSTIC, VISUAL & GEOMETRY RAIL DEFECT DETECTIONS ACROSS 440 KM TRUNK CORRIDOR
+              UNIFIED TMS (CIVIL) • SMMS (SIGNAL) • TDMS (ELECTRICAL) DEFECT REPOSITORY
             </p>
           </div>
 
@@ -64,7 +63,7 @@ export default function DefectTriagePage() {
               className="bg-primary hover:bg-primary/90 text-on-primary font-mono text-xs font-bold gap-1.5 cursor-pointer shadow-md"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>GEMINI AI TRIAGE DEFECT</span>
+              <span>LOG DEFECT VIA GEMINI AI</span>
             </Button>
 
             <Button
@@ -79,30 +78,36 @@ export default function DefectTriagePage() {
           </div>
         </div>
 
-        {/* Severity Metrics Strip */}
+        {/* Executive Summary Telemetry Strip */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-surface-container-low border-surface-container-high text-on-surface p-4 flex flex-col gap-1">
             <span className="font-mono text-[10px] text-error uppercase font-bold tracking-wider">
-              CRITICAL FRACTURES (TSR 30)
+              CRITICAL SPEED RESTRICTION DEFECTS
             </span>
-            <div className="text-3xl font-black font-mono text-error">{criticalCount}</div>
-            <p className="text-[11px] text-on-surface-variant font-mono">Immediate emergency block required</p>
+            <div className="text-3xl font-black font-mono text-error">
+              {criticalCount}
+            </div>
+            <p className="text-[11px] text-on-surface-variant font-mono">Immediate shadow block candidate</p>
           </Card>
 
           <Card className="bg-surface-container-low border-surface-container-high text-on-surface p-4 flex flex-col gap-1">
             <span className="font-mono text-[10px] text-secondary uppercase font-bold tracking-wider">
-              MAJOR DEFECTS (48H WINDOW)
+              MAJOR UNRESOLVED FAULTS
             </span>
-            <div className="text-3xl font-black font-mono text-secondary">{majorCount}</div>
-            <p className="text-[11px] text-on-surface-variant font-mono">Scheduled for bundled shadow blocks</p>
+            <div className="text-3xl font-black font-mono text-secondary">
+              {majorCount}
+            </div>
+            <p className="text-[11px] text-on-surface-variant font-mono">Scheduled for next maintenance window</p>
           </Card>
 
           <Card className="bg-surface-container-low border-surface-container-high text-on-surface p-4 flex flex-col gap-1">
             <span className="font-mono text-[10px] text-tertiary uppercase font-bold tracking-wider">
-              MINOR / ROUTINE REPAIRS
+              MINOR ROUTINE ITEMS
             </span>
-            <div className="text-3xl font-black font-mono text-tertiary">{minorCount}</div>
-            <p className="text-[11px] text-on-surface-variant font-mono">Routine track maintenance queue</p>
+            <div className="text-3xl font-black font-mono text-tertiary">
+              {minorCount}
+            </div>
+            <p className="text-[11px] text-on-surface-variant font-mono">Bundled during corridor downtime</p>
           </Card>
 
           <Card className="bg-surface-container-low border-surface-container-high text-on-surface p-4 flex flex-col gap-1">
@@ -119,16 +124,15 @@ export default function DefectTriagePage() {
           <DefectMatrix
             defects={defects}
             onOpenAIModal={() => setAiModalOpen(true)}
-            onRefresh={loadData}
           />
         </div>
       </div>
 
       {/* Gemini AI Defect Modal */}
       <AIDefectModal
-        isOpen={aiModalOpen}
-        onClose={() => setAiModalOpen(false)}
-        onDefectLogged={loadData}
+        open={aiModalOpen}
+        onOpenChange={setAiModalOpen}
+        onDefectCreated={loadData}
       />
     </>
   );

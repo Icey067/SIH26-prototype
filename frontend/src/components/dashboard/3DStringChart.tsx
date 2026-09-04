@@ -10,16 +10,26 @@ import {
   Navigation,
   RefreshCw,
   Activity,
-  CloudRain,
   Thermometer,
-  Radio,
+  AlertTriangle,
 } from "lucide-react";
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RailwayAPI } from "@/services/api";
 import { wsService } from "@/services/websocket";
 import { TrainTelemetry, MaintenanceBlock, WeatherReport } from "@/types/railway";
+
+export interface ThreeDStringChartProps {
+  activeScenario?: "NONE" | "CP_SAT" | "REROUTE" | "SPEED_RESTRICTION";
+  rerouteActive?: boolean;
+  speedRestrictionActive?: boolean;
+  conflictResolved?: boolean;
+  onTriggerSolver?: () => void;
+  onTriggerReroute?: () => void;
+  onTriggerSpeedSim?: () => void;
+}
 
 // ─── Train GLTF Models ───────────────────────────────────────────────────────
 
@@ -337,7 +347,13 @@ function OverheadCatenaryGantries() {
 }
 
 // ─── Parallel Railway Corridor Viaduct & Platforms ────────────────────────────
-function RailwayCorridorTracks() {
+function RailwayCorridorTracks({
+  rerouteActive = false,
+  speedRestrictionActive = false,
+}: {
+  rerouteActive?: boolean;
+  speedRestrictionActive?: boolean;
+}) {
   return (
     <group position={[0, 0, 0]}>
       <mesh position={[0, 0.02, 0]} receiveShadow>
@@ -358,7 +374,7 @@ function RailwayCorridorTracks() {
       <ContinuousTrackLine
         z={-3.2}
         label="[TRACK 01 // UP FAST EXPRESS LINE]"
-        badgeColor="#00f0ff"
+        badgeColor={speedRestrictionActive ? "#f59e0b" : "#00f0ff"}
         hasMaintenance={true}
         maintenanceStart={3}
         maintenanceEnd={11}
@@ -375,8 +391,8 @@ function RailwayCorridorTracks() {
       <ContinuousTrackLine
         z={3.2}
         label="[TRACK 03 // LOOP OVERTAKE & FREIGHT SIDING]"
-        badgeColor="#f59e0b"
-        hasMaintenance={true}
+        badgeColor={rerouteActive ? "#10b981" : "#f59e0b"}
+        hasMaintenance={!rerouteActive}
         maintenanceStart={14}
         maintenanceEnd={22}
       />
@@ -385,14 +401,60 @@ function RailwayCorridorTracks() {
       <group position={[14, 0.18, 1.6]} rotation={[0, -Math.PI / 8.5, 0]}>
         <mesh position={[0, 0.08, -0.45]}>
           <boxGeometry args={[7.2, 0.1, 0.06]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.15} />
+          <meshStandardMaterial
+            color={rerouteActive ? "#10b981" : "#e2e8f0"}
+            emissive={rerouteActive ? "#059669" : "#000000"}
+            emissiveIntensity={rerouteActive ? 2.5 : 0}
+            metalness={0.95}
+            roughness={0.15}
+          />
         </mesh>
         <mesh position={[0, 0.08, 0.45]}>
           <boxGeometry args={[7.2, 0.1, 0.06]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.15} />
+          <meshStandardMaterial
+            color={rerouteActive ? "#10b981" : "#e2e8f0"}
+            emissive={rerouteActive ? "#059669" : "#000000"}
+            emissiveIntensity={rerouteActive ? 2.5 : 0}
+            metalness={0.95}
+            roughness={0.15}
+          />
         </mesh>
-        <pointLight color="#10b981" intensity={2} distance={4} position={[0, 0.3, 0]} />
+        <pointLight
+          color={rerouteActive ? "#10b981" : "#00f0ff"}
+          intensity={rerouteActive ? 5.5 : 2}
+          distance={6}
+          position={[0, 0.4, 0]}
+        />
+        {rerouteActive && (
+          <Html position={[0, 2.0, 0]} center distanceFactor={14} zIndexRange={[60, 0]}>
+            <div className="px-2.5 py-1 bg-emerald-950/95 border border-emerald-400 rounded text-[9px] font-mono text-emerald-300 font-bold uppercase whitespace-nowrap shadow-xl flex items-center gap-1.5 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>TURNOUT #34-B // 3RD LINE BYPASS ENGAGED</span>
+            </div>
+          </Html>
+        )}
       </group>
+
+      {/* Speed Restriction Caution Marker */}
+      {speedRestrictionActive && (
+        <group position={[-6, 0.35, -3.2]}>
+          <mesh position={[0, 0.8, -1.2]}>
+            <cylinderGeometry args={[0.04, 0.04, 1.6, 8]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.6, -1.2]}>
+            <boxGeometry args={[0.9, 0.9, 0.08]} />
+            <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={1.5} />
+          </mesh>
+          <pointLight color="#f59e0b" intensity={4.5} distance={6} position={[0, 1.6, -1.0]} />
+          <Html position={[0, 2.6, -1.2]} center distanceFactor={14} zIndexRange={[60, 0]}>
+            <div className="px-2.5 py-1 bg-amber-950/95 border border-amber-400 rounded text-[9px] font-mono text-amber-300 font-bold uppercase whitespace-nowrap shadow-xl flex items-center gap-1.5 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span>TSR 30 KM/H SPEED RESTRICTION ZONE (KM 170-184)</span>
+            </div>
+          </Html>
+        </group>
+      )}
 
       {/* Platform 1 */}
       <group position={[-2, 0.28, -4.7]}>
@@ -550,7 +612,17 @@ function IsometricCityscape() {
 }
 
 // ─── Live Train Fleet with Real-Time Telemetry Data Binding ───────────────────
-function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
+function LiveTrainFleet({
+  liveTrains,
+  rerouteActive = false,
+  speedRestrictionActive = false,
+  activeScenario = "NONE",
+}: {
+  liveTrains: TrainTelemetry[];
+  rerouteActive?: boolean;
+  speedRestrictionActive?: boolean;
+  activeScenario?: "NONE" | "CP_SAT" | "REROUTE" | "SPEED_RESTRICTION";
+}) {
   const train1Ref = useRef<THREE.Group>(null);
   const train2Ref = useRef<THREE.Group>(null);
   const train3Ref = useRef<THREE.Group>(null);
@@ -589,7 +661,14 @@ function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
   useFrame((_, delta) => {
     // Kinematic translation speed dynamically scaled by real speed_kmph from API
     const v1Speed = (t1.speed_kmph || 125) * 0.035;
-    const v2Speed = (t2.speed_kmph || 110) * 0.032;
+    let v2Speed = (t2.speed_kmph || 110) * 0.032;
+
+    if (speedRestrictionActive) {
+      v2Speed = 30 * 0.035; // 30 km/h caution order
+    } else if (rerouteActive) {
+      v2Speed = 85 * 0.032; // 85 km/h loop line cruising
+    }
+
     const v3Speed = (t3.speed_kmph || 65) * 0.040;
 
     if (train1Ref.current) {
@@ -599,7 +678,29 @@ function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
 
     if (train2Ref.current) {
       train2Ref.current.position.x += delta * v2Speed;
-      if (train2Ref.current.position.x > 26) train2Ref.current.position.x = -26;
+      if (train2Ref.current.position.x > 26) {
+        train2Ref.current.position.x = -26;
+      }
+
+      // Handle 3D Rerouting across crossover switch
+      if (rerouteActive) {
+        const x = train2Ref.current.position.x;
+        if (x < 8) {
+          train2Ref.current.position.z = -3.2;
+          train2Ref.current.rotation.y = 0;
+        } else if (x >= 8 && x <= 18) {
+          // Transition smoothly from Z = -3.2 (Track 1) to Z = 3.2 (Track 3)
+          const progress = (x - 8) / 10;
+          train2Ref.current.position.z = -3.2 + progress * 6.4;
+          train2Ref.current.rotation.y = -0.32; // angled traversing switch
+        } else {
+          train2Ref.current.position.z = 3.2;
+          train2Ref.current.rotation.y = 0;
+        }
+      } else {
+        train2Ref.current.position.z = -3.2;
+        train2Ref.current.rotation.y = 0;
+      }
     }
 
     if (train3Ref.current) {
@@ -612,6 +713,59 @@ function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
     if (delay === 0 || status === "ON_TIME") return "text-cyan-400 border-cyan-400/80 bg-cyan-950/90";
     if (delay > 15 || status === "CRITICAL_DELAY") return "text-red-400 border-red-400/80 bg-red-950/90";
     return "text-amber-400 border-amber-400/80 bg-amber-950/90";
+  };
+
+  const renderTrain2Badge = () => {
+    if (rerouteActive) {
+      return (
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-emerald-400 border-emerald-400/90 bg-emerald-950/95 animate-pulse">
+          <Navigation className="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
+          <div className="flex flex-col text-left">
+            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+            <span className="text-emerald-300 font-semibold text-[9px]">
+              {train2Ref.current && train2Ref.current.position.x > 8 ? "REROUTED TO 3RD LINE (LOOP BYPASS)" : "APPROACHING TURNOUT 34-B"} • 85 KM/H • +3m NET
+            </span>
+          </div>
+        </div>
+      );
+    }
+    if (speedRestrictionActive) {
+      return (
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-amber-400 border-amber-400/90 bg-amber-950/95 animate-pulse">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" />
+          <div className="flex flex-col text-left">
+            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+            <span className="text-amber-300 font-semibold text-[9px]">
+              TSR 30 KM/H PRE-WARNING • KM 170-184 • CLASH AVOIDED
+            </span>
+          </div>
+        </div>
+      );
+    }
+    if (activeScenario === "CP_SAT") {
+      return (
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-cyan-400 border-cyan-400/90 bg-cyan-950/95">
+          <TrainIcon className="w-3.5 h-3.5 flex-shrink-0 text-cyan-400" />
+          <div className="flex flex-col text-left">
+            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+            <span className="text-cyan-300 font-semibold text-[9px]">
+              CP-SAT OPTIMAL GAP ASSIGNED • 120 KM/H • ON-TIME (+0m)
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t2.status, t2.delay_minutes)}`}>
+        <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
+        <div className="flex flex-col text-left">
+          <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+          <span className="font-semibold text-[9px]">
+            {t2.speed_kmph} KM/H • {t2.delay_minutes === 0 ? "ON-TIME" : `+${t2.delay_minutes}M DELAY`} • NEAR {t2.current_station}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -637,24 +791,21 @@ function LiveTrainFleet({ liveTrains }: { liveTrains: TrainTelemetry[] }) {
         </Html>
       </group>
 
-      {/* ─── Live Train 2: Trailing UP Fast Line (Z = -3.2) ──────────────── */}
+      {/* ─── Live Train 2: Trailing UP Fast Line (Z = -3.2) / Rerouted to Loop (Z = 3.2) ─── */}
       <group ref={train2Ref} position={[-12, 0.32, -3.2]}>
         <PassengerLocoModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <PassengerCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <PassengerCarriageModel position={[-1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
 
-        <pointLight color="#06b6d4" intensity={3.5} distance={6} position={[3.2, 0.6, 0]} />
+        <pointLight
+          color={rerouteActive ? "#10b981" : speedRestrictionActive ? "#f59e0b" : "#06b6d4"}
+          intensity={4.5}
+          distance={8}
+          position={[3.2, 0.6, 0]}
+        />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t2.status, t2.delay_minutes)}`}>
-            <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
-              <span className="font-semibold text-[9px]">
-                {t2.speed_kmph} KM/H • {t2.delay_minutes === 0 ? "ON-TIME" : `+${t2.delay_minutes}M DELAY`} • NEAR {t2.current_station}
-              </span>
-            </div>
-          </div>
+          {renderTrain2Badge()}
         </Html>
       </group>
 
@@ -838,14 +989,23 @@ function ModelLoadingFallback() {
 }
 
 // ─── Main 3D Digital Twin Component ──────────────────────────────────────────
-export const ThreeDStringChart: React.FC = () => {
+export const ThreeDStringChart: React.FC<ThreeDStringChartProps> = ({
+  activeScenario = "NONE",
+  rerouteActive = false,
+  speedRestrictionActive = false,
+  conflictResolved: _conflictResolved = false,
+  onTriggerSolver: _onTriggerSolver,
+  onTriggerReroute: _onTriggerReroute,
+  onTriggerSpeedSim: _onTriggerSpeedSim,
+}) => {
   const [resetKey, setResetKey] = useState(0);
   const [liveTrains, setLiveTrains] = useState<TrainTelemetry[]>([]);
   const [liveBlocks, setLiveBlocks] = useState<MaintenanceBlock[]>([]);
   const [liveWeather, setLiveWeather] = useState<WeatherReport | null>(null);
-  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [_isLiveStreaming, setIsLiveStreaming] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>("");
+
 
   // Fetch Live Telemetry Snapshot from Backend REST + WebSocket Stream
   const fetchLiveTelemetry = async () => {
@@ -932,6 +1092,28 @@ export const ThreeDStringChart: React.FC = () => {
               <span>LIVE TELEMETRY ACTIVE</span>
             </Badge>
 
+            {/* Tactical Scenario Active Indicator */}
+            {rerouteActive && (
+              <Badge variant="outline" className="bg-emerald-950/90 border-emerald-400 text-emerald-300 font-mono text-[10px] flex items-center gap-1 animate-pulse">
+                <Navigation className="w-3 h-3 text-emerald-400" />
+                <span>3RD LINE LOOP BYPASS ENGAGED</span>
+              </Badge>
+            )}
+
+            {speedRestrictionActive && (
+              <Badge variant="outline" className="bg-amber-950/90 border-amber-400 text-amber-300 font-mono text-[10px] flex items-center gap-1 animate-pulse">
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                <span>TSR 30 KM/H SPEED RESTRICTION ACTIVE</span>
+              </Badge>
+            )}
+
+            {activeScenario === "CP_SAT" && (
+              <Badge variant="outline" className="bg-cyan-950/90 border-cyan-400 text-cyan-300 font-mono text-[10px] flex items-center gap-1">
+                <Shield className="w-3 h-3 text-cyan-400" />
+                <span>OR-TOOLS CP-SAT OPTIMIZED</span>
+              </Badge>
+            )}
+
             {/* Trains Tracked Badge */}
             <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-zinc-300 font-mono text-[10px] flex items-center gap-1">
               <Activity className="w-3 h-3 text-cyan-400" />
@@ -945,12 +1127,6 @@ export const ThreeDStringChart: React.FC = () => {
                 <span>RAIL TEMP {liveWeather.estimated_rail_temp_c}°C</span>
               </Badge>
             )}
-
-            {/* Active Blocks Badge */}
-            <Badge variant="outline" className="bg-zinc-900/80 border-zinc-700 text-amber-400 font-mono text-[10px] flex items-center gap-1">
-              <Wrench className="w-3 h-3 text-amber-400" />
-              <span>{liveBlocks.length || 2} ACTIVE POSSESSIONS</span>
-            </Badge>
 
             {lastSyncTime && (
               <span className="text-zinc-500 text-[10px] font-mono">
@@ -1017,10 +1193,18 @@ export const ThreeDStringChart: React.FC = () => {
             <StationHub position={[-2, 0.22, -6.8]} rotation={[0, 0, 0]} weather={liveWeather} />
 
             {/* 3. Physical Tracks, Platforms & OHE */}
-            <RailwayCorridorTracks />
+            <RailwayCorridorTracks
+              rerouteActive={rerouteActive}
+              speedRestrictionActive={speedRestrictionActive}
+            />
 
             {/* 4. Live Train Models Driven by Real Backend Telemetry */}
-            <LiveTrainFleet liveTrains={liveTrains} />
+            <LiveTrainFleet
+              liveTrains={liveTrains}
+              rerouteActive={rerouteActive}
+              speedRestrictionActive={speedRestrictionActive}
+              activeScenario={activeScenario}
+            />
 
             {/* 5. PostgreSQL In-Situ Possession Blocks */}
             <InSituMaintenanceBlocks blocks={liveBlocks} />
@@ -1038,9 +1222,9 @@ export const ThreeDStringChart: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-[#06b6d4]" />
+              <span className={`w-2.5 h-2.5 rounded ${rerouteActive ? "bg-emerald-400" : speedRestrictionActive ? "bg-amber-400" : "bg-[#06b6d4]"}`} />
               <span className="text-zinc-300">
-                {liveTrains[1]?.train_number || "12424"} (UP Headway • {liveTrains[1]?.speed_kmph || 110} km/h)
+                {liveTrains[1]?.train_number || "12424"} ({rerouteActive ? "Rerouted to Loop • 85 km/h" : speedRestrictionActive ? "TSR Caution • 30 km/h" : `UP Headway • ${liveTrains[1]?.speed_kmph || 110} km/h`})
               </span>
             </div>
             <div className="flex items-center gap-1.5">

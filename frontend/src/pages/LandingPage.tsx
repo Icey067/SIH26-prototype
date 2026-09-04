@@ -5,30 +5,23 @@ import * as THREE from "three";
 import {
   ArrowUpRight,
   ArrowRight,
-  Activity,
-  Train,
-  Shield,
-  Zap,
   Cpu,
-  Layers,
-  GitBranch,
-  Clock,
   AlertTriangle,
-  CheckCircle2,
-  Terminal,
-  BarChart3,
   Radio,
-  Sliders,
-  ChevronRight,
+  Terminal,
+  Activity,
 } from "lucide-react";
+
 
 // ─── Framer Motion Entrance Variant ──────────────────────────────────────────
 const motionVariant = {
   initial: { opacity: 0, y: 30 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true },
-  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  transition: { duration: 0.7 },
 };
+
+
 
 // ─── Three.js 3D Railway Corridor Viewport ──────────────────────────────────
 function ThreeCorridorCanvas() {
@@ -543,10 +536,11 @@ export default function LandingPage() {
             </div>
 
             <button
-              onClick={() => navigate("/dashboard")}
-              className="group flex items-center gap-2 px-4 py-2 bg-white hover:bg-cyan-400 text-black font-mono text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-sm active:scale-95 cursor-pointer"
+              onClick={() => navigate("/signin")}
+              className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-mono text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_22px_rgba(6,182,212,0.7)] active:scale-95 cursor-pointer rounded-sm"
             >
-              <span>LAUNCH CONSOLE</span>
+              <Terminal className="w-3.5 h-3.5" />
+              <span>ENTER TERMINAL</span>
               <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </button>
           </div>
@@ -564,26 +558,87 @@ export default function LandingPage() {
           <span className="hidden sm:inline">DISPATCH CLUSTER: NCR-PRYJ-01</span>
         </div>
 
-        {/* Massive Condensed Display Headline */}
-        <motion.div {...motionVariant} className="flex flex-col gap-2">
-          <p className="font-mono text-xs sm:text-sm uppercase tracking-widest text-cyan-400 font-bold">
-            [ PROBLEM STATEMENT 26027 // AUTONOMOUS RAILWAY BLOCK PLANNING ]
-          </p>
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter uppercase leading-[0.92] text-white">
-            AUTONOMOUS CORRIDOR
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-300 to-zinc-600">
-              ORCHESTRATION.
-            </span>
-          </h1>
-          <p className="max-w-2xl text-zinc-400 text-sm sm:text-base font-light tracking-wide mt-2">
-            AI-driven operations research engine unifying Track, Signal, and Traction maintenance
-            into conflict-free shadow blocks—safeguarding trunk line headway without passenger train cancellations.
-          </p>
+        {/* Massive Condensed Display Headline & Terminal Launch Dock */}
+        <motion.div {...motionVariant} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <p className="font-mono text-xs sm:text-sm uppercase tracking-widest text-cyan-400 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span>[ PROBLEM STATEMENT 26027 // AUTONOMOUS RAILWAY BLOCK PLANNING ]</span>
+            </p>
+            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter uppercase leading-[0.92] text-white">
+              AUTONOMOUS CORRIDOR
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-300 to-zinc-600">
+                ORCHESTRATION.
+              </span>
+            </h1>
+            <p className="max-w-2xl text-zinc-400 text-sm sm:text-base font-light tracking-wide mt-2">
+              AI-driven operations research engine unifying Track, Signal, and Traction maintenance
+              into conflict-free shadow blocks—safeguarding trunk line headway without passenger train cancellations.
+            </p>
+          </div>
+
+          {/* 🚀 PRIMARY ENTER TERMINAL ACTION DOCK */}
+          <div className="p-4 sm:p-5 rounded-lg bg-zinc-950/90 border border-zinc-800/90 shadow-2xl backdrop-blur-xl flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/signin")}
+                  className="group relative flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-mono text-xs sm:text-sm font-black uppercase tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:shadow-[0_0_35px_rgba(6,182,212,0.8)] active:scale-95 cursor-pointer rounded-sm"
+                >
+                  <Terminal className="w-4 h-4 text-black" />
+                  <span>ENTER TERMINAL // OFFICER AUTH</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+
+                <a
+                  href="#corridor-canvas"
+                  className="hidden sm:flex items-center gap-2 px-4 py-4 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 font-mono text-xs font-bold uppercase tracking-wider transition-colors rounded-sm"
+                >
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>3D SIMULATOR VIEW</span>
+                </a>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400 bg-zinc-900/80 px-3 py-2 rounded border border-zinc-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-zinc-300">SECURITY:</span>
+                <span className="text-emerald-400 font-bold">CRIS 256-BIT HSM</span>
+              </div>
+            </div>
+
+            {/* Quick Terminal Command & 1-Click Role Direct Launch */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-zinc-800/80 text-xs font-mono">
+              <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
+                <span className="text-cyan-400 font-bold">&gt;_ SAMANVAY-SHELL:</span>
+                <span className="text-zinc-500 hidden md:inline">SYSTEM READY // CLICK TO AUTHENTICATE</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                <span className="text-zinc-500 uppercase tracking-widest text-[9px] mr-1">FAST ROLES:</span>
+                {[
+                  { name: "Controller PRYJ", id: "OFFICER-01" },
+                  { name: "Sr. DOM (Ops)", id: "OFFICER-02" },
+                  { name: "Sr. DEN (TMS)", id: "OFFICER-03" },
+                  { name: "Sr. DSTE (Signal)", id: "OFFICER-04" },
+                ].map((role) => (
+                  <button
+                    key={role.id}
+                    onClick={() => navigate("/signin")}
+                    className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-cyan-950 hover:text-cyan-300 hover:border-cyan-500/50 border border-zinc-800 text-zinc-400 transition-colors cursor-pointer"
+                  >
+                    {role.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Central 3D Showcase Frame (16:9 Glassmorphic Viewport with Three.js) */}
         <motion.div
+          id="corridor-canvas"
           {...motionVariant}
           className="relative w-full aspect-[16/9] max-h-[560px] bg-zinc-950 border border-zinc-800 shadow-2xl rounded-sm overflow-hidden"
         >
@@ -902,10 +957,11 @@ export default function LandingPage() {
           </div>
 
           <button
-            onClick={() => navigate("/dashboard")}
-            className="group flex items-center gap-3 px-8 py-5 bg-white hover:bg-cyan-400 text-black font-mono text-sm font-black uppercase tracking-wider transition-all duration-300 shadow-xl active:scale-95 cursor-pointer"
+            onClick={() => navigate("/signin")}
+            className="group flex items-center gap-3 px-8 py-5 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-black font-mono text-sm font-black uppercase tracking-wider transition-all duration-300 shadow-[0_0_30px_rgba(6,182,212,0.5)] active:scale-95 cursor-pointer rounded-sm"
           >
-            <span>ENTER SECTION CONTROLLER CONSOLE</span>
+            <Terminal className="w-5 h-5" />
+            <span>ENTER TERMINAL // G&amp;SR AUTH</span>
             <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1.5" />
           </button>
         </motion.div>

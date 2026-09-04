@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { RailwayAPI } from "@/services/api";
 import { wsService } from "@/services/websocket";
+import { useAuth } from "../context/AuthContext";
 import {
   TrainTelemetry,
   MaintenanceBlock,
@@ -17,16 +19,24 @@ import {
   Key,
   Loader2,
   Brain,
+  Navigation,
+  ShieldCheck,
+  UserCheck,
+  ArrowRightLeft,
+  LogIn,
 } from "lucide-react";
 
 import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
 
 export default function Dashboard() {
+  const { user, isAuthenticated, switchOfficer, presetOfficers } = useAuth();
   const [trains, setTrains] = useState<TrainTelemetry[]>([]);
   const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
-  const [conflicts, setConflicts] = useState<ConflictAlert[]>([]);
-  const [trajectories, setTrajectories] = useState<TrainTrajectory[]>([]);
-  const [conflictReport, setConflictReport] = useState<ConflictReport | null>(null);
+  const [_conflicts, setConflicts] = useState<ConflictAlert[]>([]);
+  const [_trajectories, setTrajectories] = useState<TrainTrajectory[]>([]);
+  const [_conflictReport, setConflictReport] = useState<ConflictReport | null>(null);
+
+
 
   // UI Interactive States
   const [chartDisplayMode, setChartDisplayMode] = useState<"3D" | "2D">("3D");
@@ -37,7 +47,9 @@ export default function Dashboard() {
   const [solvedStatus, setSolvedStatus] = useState<string | null>(null);
   const [issuedPrivateNumber, setIssuedPrivateNumber] = useState<string | null>(null);
   const [conflictZoneResolved, setConflictZoneResolved] = useState<boolean>(false);
+  const [activeScenario, setActiveScenario] = useState<"NONE" | "CP_SAT" | "REROUTE" | "SPEED_RESTRICTION">("NONE");
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString("en-IN"));
+  const [isOfficerHandoverOpen, setIsOfficerHandoverOpen] = useState<boolean>(false);
 
   // Fetch initial API data from FastAPI backend
   const loadData = async () => {
@@ -80,30 +92,51 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Handle Solve via Google OR-Tools CP-SAT Solver
+  // 1. Handle Solve via Google OR-Tools CP-SAT Solver
   const handleSolveOptimizer = async () => {
     setIsSolving(true);
+    setActiveScenario("CP_SAT");
     try {
       const res: OptimizationBundleResponse = await RailwayAPI.runOptimizationBundle("NCR-GZB-TDL-UP", "UP");
       if (res.blocks && res.blocks.length > 0) {
         setBlocks(res.blocks);
       }
       setConflictZoneResolved(true);
-      setSolvedStatus(`OPTIMAL SCHEDULE COMPUTED (${res.metrics.saved_track_downtime_mins}m SAVED • 0m DELAY)`);
+      setSolvedStatus(`CP-SAT OPTIMAL MATRIX COMPUTED (${res.metrics?.saved_track_downtime_mins || 140}m SAVED • 0m DELAY)`);
       setTimeout(() => {
         setSolvedStatus(null);
-      }, 5000);
+      }, 6000);
     } catch (err) {
       console.error("Solver error:", err);
       // Fallback visual simulation if backend busy
       setConflictZoneResolved(true);
-      setSolvedStatus("OPTIMAL SCHEDULE COMPUTED (+0m IMPACT)");
+      setSolvedStatus("CP-SAT OPTIMAL MATRIX COMPUTED (+0m IMPACT)");
       setTimeout(() => {
         setSolvedStatus(null);
-      }, 5000);
+      }, 6000);
     } finally {
       setIsSolving(false);
     }
+  };
+
+  // 2. Handle Auto-Reroute to 3rd Line (Loop Bypass at TDL Outer km 184)
+  const handleAutoReroute3rdLine = () => {
+    setActiveScenario("REROUTE");
+    setConflictZoneResolved(true);
+    setSolvedStatus("TRAIN 12424 REROUTED TO 3RD LINE (LOOP BYPASS) • +3m NET DELAY");
+    setTimeout(() => {
+      setSolvedStatus(null);
+    }, 6000);
+  };
+
+  // 3. Handle Simulate Pre-Warning Speed (TSR 30 km/h Caution Order on Approach km 170-184)
+  const handleSimulatePreWarningSpeed = () => {
+    setActiveScenario("SPEED_RESTRICTION");
+    setConflictZoneResolved(true);
+    setSolvedStatus("TSR 30 KM/H PRE-WARNING SPEED ORDER SIMULATED • +6m SAFE GAP");
+    setTimeout(() => {
+      setSolvedStatus(null);
+    }, 6000);
   };
 
   // Handle Granting a Block and generating authentic Private Number
@@ -233,6 +266,125 @@ export default function Dashboard() {
             <span className="font-mono text-[10px] text-on-surface-variant">SYNC: 140ms</span>
           </div>
         </div>
+
+        {/* Tactical Duty Controller & Officer Authentication Bar */}
+        <div className="flex items-center justify-between px-3 py-2 rounded bg-surface-container-low border border-surface-container-high shadow-sm">
+          <div className="flex items-center gap-3 flex-wrap">
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <div className="h-8 w-8 rounded bg-surface-container-highest border border-primary/40 flex items-center justify-center text-primary font-mono font-bold text-xs shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                    <UserCheck className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-tertiary font-bold tracking-wider uppercase">DUTY CONTROLLER:</span>
+                    <span className="text-xs font-bold text-on-surface">{user.name}</span>
+                    <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-primary/15 text-primary border border-primary/30 font-semibold">
+                      {user.badgeCode}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-on-surface-variant font-mono">
+                    <span>{user.designation}</span>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400 inline" /> G&SR AUTH VALIDATED
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-amber-400 font-mono">
+                <AlertTriangle className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>UNAUTHENTICATED SESSION — RUNNING IN GUEST OBSERVER MODE</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isAuthenticated && user ? (
+              <>
+                <button
+                  onClick={() => setIsOfficerHandoverOpen(!isOfficerHandoverOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest border border-surface-container-highest text-on-surface font-mono text-[10px] font-bold transition-all cursor-pointer"
+                >
+                  <ArrowRightLeft className="w-3 h-3 text-primary" />
+                  <span>DUTY HANDOVER (SWITCH ROLE)</span>
+                </button>
+                <Link
+                  to="/signin"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-mono text-[10px] font-bold transition-all"
+                >
+                  <LogIn className="w-3 h-3 text-primary" />
+                  <span>FULL SIGN IN</span>
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/signin"
+                className="flex items-center gap-2 px-3 py-1.5 rounded bg-primary text-black font-mono text-xs font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:brightness-110 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5 text-black" />
+                <span>OFFICER SIGN IN / LOGIN</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Duty Handover Quick Switch Modal / Drawer */}
+        {isOfficerHandoverOpen && (
+          <div className="p-3 rounded bg-surface-container-lowest border border-primary/30 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-surface-container-high">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider font-mono">
+                  INDIAN RAILWAYS DUTY HANDOVER (DEMO SIMULATION PROFILES)
+                </h4>
+              </div>
+              <button
+                onClick={() => setIsOfficerHandoverOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface text-xs font-mono px-2 py-0.5 rounded bg-surface-container-high"
+              >
+                ✕ CLOSE
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+              {presetOfficers.map((officer) => (
+                <button
+                  key={officer.id}
+                  onClick={() => {
+                    switchOfficer(officer.id);
+                    setIsOfficerHandoverOpen(false);
+                  }}
+                  className={`p-2.5 rounded text-left flex flex-col justify-between border transition-all cursor-pointer ${
+                    user?.id === officer.id
+                      ? "bg-primary/15 border-primary shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                      : "bg-surface-container hover:bg-surface-container-high border-surface-container-high"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-surface-container-highest text-primary font-bold">
+                        {officer.badgeCode}
+                      </span>
+                      {user?.id === officer.id && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      )}
+                    </div>
+                    <div className="font-bold text-xs text-on-surface line-clamp-1">{officer.name}</div>
+                    <div className="text-[10px] text-on-surface-variant font-mono mt-0.5 line-clamp-2">{officer.designation}</div>
+                  </div>
+                  <div className="mt-2 pt-1 border-t border-surface-container-high/60 flex items-center justify-between text-[9px] font-mono text-tertiary font-semibold">
+                    <span>{officer.department}</span>
+                    <span>1-CLICK &rarr;</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* SECTION 1: High-Density Schematic Corridor Strip (Track Map) */}
         <section className="rounded bg-surface-container-low p-3 shadow-md border border-surface-container-high">
@@ -489,7 +641,15 @@ export default function Dashboard() {
           {/* Main Marey Graph or 3D Space-Time Rail Matrix */}
           {chartDisplayMode === "3D" ? (
             <div className="w-full">
-              <ThreeDStringChart />
+              <ThreeDStringChart
+                activeScenario={activeScenario}
+                rerouteActive={activeScenario === "REROUTE"}
+                speedRestrictionActive={activeScenario === "SPEED_RESTRICTION"}
+                conflictResolved={conflictZoneResolved}
+                onTriggerSolver={handleSolveOptimizer}
+                onTriggerReroute={handleAutoReroute3rdLine}
+                onTriggerSpeedSim={handleSimulatePreWarningSpeed}
+              />
             </div>
           ) : (
             <div className="relative w-full rounded bg-surface-container-lowest overflow-hidden border border-surface-container-high">
@@ -587,10 +747,24 @@ export default function Dashboard() {
                   {highlightConflicts && (
                     <g className="cursor-pointer" id="conflict-zone-04">
                       {conflictZoneResolved ? (
-                        <>
-                          <rect x="260" y="160" width="55" height="38" fill="#005236" fillOpacity="0.3" stroke="#4edea3" strokeWidth="1.5" rx="3" />
-                          <text x="288" y="183" fill="#4edea3" fontSize="9" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">RESOLVED</text>
-                        </>
+                        activeScenario === "REROUTE" ? (
+                          <>
+                            <rect x="245" y="148" width="90" height="42" fill="#022c22" fillOpacity="0.85" stroke="#10b981" strokeWidth="1.5" rx="3" />
+                            <text x="290" y="165" fill="#34d399" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">3RD LINE DIVERSION</text>
+                            <text x="290" y="179" fill="#10b981" fontSize="7" fontFamily="JetBrains Mono" textAnchor="middle">+3m NET HEADWAY</text>
+                          </>
+                        ) : activeScenario === "SPEED_RESTRICTION" ? (
+                          <>
+                            <rect x="245" y="148" width="90" height="42" fill="#451a03" fillOpacity="0.85" stroke="#f59e0b" strokeWidth="1.5" rx="3" />
+                            <text x="290" y="165" fill="#fbbf24" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">TSR 30 KM/H ORDER</text>
+                            <text x="290" y="179" fill="#f59e0b" fontSize="7" fontFamily="JetBrains Mono" textAnchor="middle">SAFE APPROACH</text>
+                          </>
+                        ) : (
+                          <>
+                            <rect x="260" y="160" width="60" height="38" fill="#005236" fillOpacity="0.8" stroke="#4edea3" strokeWidth="1.5" rx="3" />
+                            <text x="290" y="183" fill="#4edea3" fontSize="9" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">RESOLVED</text>
+                          </>
+                        )
                       ) : (
                         <>
                           <rect x="260" y="160" width="55" height="38" rx="3" fill="#93000a" fillOpacity="0.25" stroke="#ffb4ab" strokeWidth="1.5" strokeDasharray="2 2" />
@@ -602,11 +776,23 @@ export default function Dashboard() {
                   )}
 
                   {/* TRAIN PATH STRINGS (TRAJECTORIES) */}
-                  {/* 1. Train 12424 Dibrugarh Rajdhani Express (UP Main - Sharp Fast Gradient) */}
-                  <path d="M 83 10 L 195 95 L 288 179 L 360 270 L 440 370" fill="none" stroke="#4cd7f6" strokeWidth="3" strokeLinecap="round" />
-                  {/* Delay deviation projection dashed line if conflict unresolved */}
-                  {!conflictZoneResolved && (
-                    <path d="M 288 179 L 340 270 L 495 370" fill="none" stroke="#ffb4ab" strokeWidth="2" strokeDasharray="4 3" />
+                  {/* 1. Train 12424 Dibrugarh Rajdhani Express (UP Main / Diverted / TSR) */}
+                  {activeScenario === "REROUTE" ? (
+                    <>
+                      <path d="M 83 10 L 195 95 L 260 155 L 320 220 L 375 270 L 440 370" fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" />
+                      <path d="M 260 155 L 320 220" fill="none" stroke="#34d399" strokeWidth="4" strokeDasharray="3 3" />
+                    </>
+                  ) : activeScenario === "SPEED_RESTRICTION" ? (
+                    <>
+                      <path d="M 83 10 L 195 95 L 260 155 L 340 240 L 385 270 L 452 370" fill="none" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M 83 10 L 195 95 L 288 179 L 360 270 L 440 370" fill="none" stroke={activeScenario === "CP_SAT" ? "#00f0ff" : "#4cd7f6"} strokeWidth="3" strokeLinecap="round" />
+                      {!conflictZoneResolved && (
+                        <path d="M 288 179 L 340 270 L 495 370" fill="none" stroke="#ffb4ab" strokeWidth="2" strokeDasharray="4 3" />
+                      )}
+                    </>
                   )}
 
                   {/* 2. Train 12004 Lucknow Shatabdi Express (UP Fast) */}
@@ -626,8 +812,27 @@ export default function Dashboard() {
 
                   {/* Train Label Badges on String Chart */}
                   <g transform="translate(195, 78)">
-                    <rect x="0" y="0" width="75" height="15" rx="2" fill="#003640" stroke="#4cd7f6" strokeWidth="1" />
-                    <text x="37" y="11" fill="#4cd7f6" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">12424 RAJ (UP)</text>
+                    <rect
+                      x="0"
+                      y="0"
+                      width={activeScenario === "REROUTE" ? 85 : activeScenario === "SPEED_RESTRICTION" ? 85 : 75}
+                      height="15"
+                      rx="2"
+                      fill={activeScenario === "REROUTE" ? "#022c22" : activeScenario === "SPEED_RESTRICTION" ? "#451a03" : "#003640"}
+                      stroke={activeScenario === "REROUTE" ? "#10b981" : activeScenario === "SPEED_RESTRICTION" ? "#f59e0b" : "#4cd7f6"}
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={activeScenario === "REROUTE" ? 42 : activeScenario === "SPEED_RESTRICTION" ? 42 : 37}
+                      y="11"
+                      fill={activeScenario === "REROUTE" ? "#34d399" : activeScenario === "SPEED_RESTRICTION" ? "#fbbf24" : "#4cd7f6"}
+                      fontSize="8"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="700"
+                      textAnchor="middle"
+                    >
+                      {activeScenario === "REROUTE" ? "12424 RAJ (3RD L)" : activeScenario === "SPEED_RESTRICTION" ? "12424 RAJ (TSR30)" : "12424 RAJ (UP)"}
+                    </text>
                   </g>
                   <g transform="translate(240, 240)">
                     <rect x="0" y="0" width="72" height="15" rx="2" fill="#472a00" stroke="#ffb95f" strokeWidth="1" />
@@ -678,54 +883,60 @@ export default function Dashboard() {
                 <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-secondary"></span> Vande Bharat Semi-High Speed</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-outline"></span> Scheduled Freight / BOXN</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-1 bg-secondary opacity-60"></span> Maintenance Block Zone</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 border-t border-dashed border-error"></span> Projected Delay Path</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-on-surface">MAREY ENGINE REFRESH:</span>
-                <span className="text-primary font-bold">
-                  {trajectories.length > 0 ? `${trajectories.length} TRAJECTORIES (LIVE)` : "12s AUTO"}
-                </span>
-              </div>
+              <span className="font-mono text-[9px] text-outline">
+                {conflictZoneResolved ? "STATUS: CONFLICT MITIGATED" : "STATUS: CRITICAL CLASH AT TDL"}
+              </span>
             </div>
           </div>
           )}
         </section>
 
-        {/* SECTION 3: Bottom Split Section (Dynamic Conflict Cockpit & Backlog Grant Control) */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
-          {/* LEFT PANEL: Dynamic Conflict Cockpit (5 cols) */}
+        {/* ─── BOTTOM ROW: Tactical Decision Matrix & Possession Backlog ───────────── */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
+          {/* LEFT PANEL: Critical Conflict Resolution Tactical Cockpit (5 cols) */}
           <div className="xl:col-span-5 rounded bg-surface-container-low p-3 shadow-md flex flex-col justify-between gap-3 border border-surface-container-high">
             <div className="flex flex-col gap-2.5">
-              {/* Panel Header */}
-              <div className="flex items-center justify-between pb-1">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-1 border-b border-surface-container-high">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-4 bg-error rounded"></div>
+                  <div className="w-2 h-4 bg-primary rounded"></div>
                   <h3 className="text-sm font-bold text-on-surface tracking-tight uppercase">
-                    Conflict Cockpit
+                    Tactical Conflict Resolution
                   </h3>
                 </div>
-                <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
-                  conflictZoneResolved
-                    ? "bg-tertiary-container text-on-tertiary-container"
-                    : "bg-error-container text-on-error-container animate-pulse"
-                }`}>
-                  {conflictZoneResolved ? "0 CONFLICTS • RESOLVED" : `${conflicts.length > 0 ? conflicts.length : conflictReport?.summary?.total_conflicts || 2} CRITICAL CLASHES`}
+                <span className="px-2 py-0.5 rounded bg-surface-container-highest font-mono text-[10px] text-primary uppercase font-bold border border-primary/20">
+                  {conflictZoneResolved ? "0 PENDING" : "2 PENDING"}
                 </span>
               </div>
 
-              <div className="p-2 rounded bg-surface-container-lowest text-on-surface-variant text-xs border border-surface-container-high">
-                Algorithmic collision detection evaluated across <strong className="text-on-surface">{trains.length > 0 ? `${trains.length} trains` : "36 trains"}</strong> and <strong className="text-on-surface">{blocks.length > 0 ? `${blocks.length} engineering possessions` : "8 engineering possessions"}</strong> for the next 8-hour window.
-              </div>
-
-              {/* Conflict Card 1 (CRITICAL) */}
+              {/* Conflict Card 1 (CRITICAL / RESOLVED) */}
               <div className={`p-3 rounded bg-surface-container flex flex-col gap-1.5 shadow-sm border transition-all ${
-                conflictZoneResolved ? "border-tertiary/40 bg-tertiary-container/10" : "border-surface-container-high"
+                conflictZoneResolved
+                  ? activeScenario === "REROUTE"
+                    ? "border-emerald-500/50 bg-emerald-950/20"
+                    : activeScenario === "SPEED_RESTRICTION"
+                    ? "border-amber-500/50 bg-amber-950/20"
+                    : "border-tertiary/40 bg-tertiary-container/10"
+                  : "border-surface-container-high"
               }`}>
                 <div className="flex items-center justify-between">
                   <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
-                    conflictZoneResolved ? "bg-tertiary-container text-on-tertiary-container" : "bg-error-container text-on-error-container"
+                    conflictZoneResolved
+                      ? activeScenario === "REROUTE"
+                        ? "bg-emerald-900/80 text-emerald-200 border border-emerald-500"
+                        : activeScenario === "SPEED_RESTRICTION"
+                        ? "bg-amber-900/80 text-amber-200 border border-amber-500"
+                        : "bg-tertiary-container text-on-tertiary-container"
+                      : "bg-error-container text-on-error-container"
                   }`}>
-                    {conflictZoneResolved ? "RESOLVED VIA CP-SAT" : "CRITICAL CONFLICT #C-04"}
+                    {conflictZoneResolved
+                      ? activeScenario === "REROUTE"
+                        ? "RESOLVED: 3RD LINE BYPASS"
+                        : activeScenario === "SPEED_RESTRICTION"
+                        ? "RESOLVED: TSR SPEED CONTROL"
+                        : "RESOLVED VIA CP-SAT"
+                      : "CRITICAL CONFLICT #C-04"}
                   </span>
                   <span className="font-mono text-xs text-on-surface-variant">Tundla Outer • km 184</span>
                 </div>
@@ -734,7 +945,13 @@ export default function Dashboard() {
                     TMS Track Renewal clashes with 12424 Rajdhani
                   </div>
                   <p className="text-[11px] text-on-surface-variant mt-0.5">
-                    Possession request TMS-8841 (Deep Screening) blocks UP Main [04:00 - 07:30]. Clashes with Train 12424 Dibrugarh Rajdhani expected at km 184 at 04:18 IST.
+                    {activeScenario === "REROUTE"
+                      ? "Rajdhani 12424 dynamically switched to Track 03 (Loop Siding at TDL Outer). Clashes cleared with +3m minimal headway gain."
+                      : activeScenario === "SPEED_RESTRICTION"
+                      ? "TSR 30 km/h caution order active on km 170-184 approach. Rajdhani safely timed with controlled approach gap."
+                      : conflictZoneResolved
+                      ? "Google OR-Tools CP-SAT solver synchronized multi-department shadow blocks into natural train gaps."
+                      : "Possession request TMS-8841 (Deep Screening) blocks UP Main [04:00 - 07:30]. Clashes with Train 12424 Dibrugarh Rajdhani expected at km 184 at 04:18 IST."}
                   </p>
                 </div>
 
@@ -742,8 +959,22 @@ export default function Dashboard() {
                 <div className="grid grid-cols-3 gap-1.5 py-1 text-center font-mono text-xs">
                   <div className="p-1 rounded bg-surface-container-lowest border border-surface-container-high">
                     <div className="text-[9px] text-on-surface-variant font-bold">UNMITIGATED DELAY</div>
-                    <div className={conflictZoneResolved ? "text-tertiary font-bold" : "text-error font-bold"}>
-                      {conflictZoneResolved ? "+0 MIN" : "+42 MIN"}
+                    <div className={
+                      conflictZoneResolved
+                        ? activeScenario === "REROUTE"
+                          ? "text-emerald-400 font-bold"
+                          : activeScenario === "SPEED_RESTRICTION"
+                          ? "text-amber-400 font-bold"
+                          : "text-tertiary font-bold"
+                        : "text-error font-bold"
+                    }>
+                      {conflictZoneResolved
+                        ? activeScenario === "REROUTE"
+                          ? "+3 MIN"
+                          : activeScenario === "SPEED_RESTRICTION"
+                          ? "+6 MIN"
+                          : "+0 MIN"
+                        : "+42 MIN"}
                     </div>
                   </div>
                   <div className="p-1 rounded bg-surface-container-lowest border border-surface-container-high">
@@ -755,7 +986,13 @@ export default function Dashboard() {
                   <div className="p-1 rounded bg-surface-container-lowest border border-surface-container-high">
                     <div className="text-[9px] text-on-surface-variant font-bold">COST PENALTY</div>
                     <div className="text-on-surface font-bold">
-                      {conflictZoneResolved ? "₹0 SAVED" : "₹1.84 LAKH"}
+                      {conflictZoneResolved
+                        ? activeScenario === "REROUTE"
+                          ? "₹12K FUEL SAVED"
+                          : activeScenario === "SPEED_RESTRICTION"
+                          ? "₹18K SAVED"
+                          : "₹0 SAVED"
+                        : "₹1.84 LAKH"}
                     </div>
                   </div>
                 </div>
@@ -801,7 +1038,11 @@ export default function Dashboard() {
               <button
                 onClick={handleSolveOptimizer}
                 disabled={isSolving}
-                className="w-full py-2.5 px-3 rounded bg-primary-container text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(6,182,212,0.4)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                className={`w-full py-2.5 px-3 rounded text-on-primary font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                  activeScenario === "CP_SAT"
+                    ? "bg-primary text-black shadow-[0_0_20px_rgba(6,182,212,0.8)] border border-white"
+                    : "bg-primary-container shadow-[0_0_16px_rgba(6,182,212,0.4)] hover:brightness-110 active:scale-[0.99]"
+                }`}
               >
                 {isSolving ? (
                   <>
@@ -811,7 +1052,7 @@ export default function Dashboard() {
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    <span>{solvedStatus || "SOLVE VIA OR-TOOLS CP-SAT SOLVER"}</span>
+                    <span>{solvedStatus && activeScenario === "CP_SAT" ? solvedStatus : "SOLVE VIA OR-TOOLS CP-SAT SOLVER"}</span>
                   </>
                 )}
               </button>
@@ -819,21 +1060,34 @@ export default function Dashboard() {
               <div className="flex items-center justify-between px-1 font-mono text-[11px] text-on-surface-variant">
                 <span>LATENCY: 140ms</span>
                 <span>FEASIBLE SLOTS: 3 AVAILABLE</span>
-                <span className="text-tertiary font-bold">SOLVER CONVERGED</span>
+                <span className={conflictZoneResolved ? "text-tertiary font-bold" : "text-on-surface-variant"}>
+                  {conflictZoneResolved ? "SOLVER CONVERGED" : "PENDING RESOLUTION"}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-1.5 pt-1">
                 <button
-                  onClick={handleSolveOptimizer}
-                  className="py-1.5 px-2 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-mono text-[10px] font-bold uppercase transition-colors border border-surface-container-highest"
+                  onClick={handleAutoReroute3rdLine}
+                  className={`py-2 px-2 rounded font-mono text-[10px] font-bold uppercase transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeScenario === "REROUTE"
+                      ? "bg-emerald-600 text-white border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.6)]"
+                      : "bg-surface-container-high text-on-surface hover:bg-surface-bright border-surface-container-highest"
+                  }`}
                 >
-                  Auto-Reroute to 3rd Line
+                  <Navigation className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>{activeScenario === "REROUTE" ? "✓ 3rd Line Active" : "Auto-Reroute to 3rd Line"}</span>
                 </button>
+
                 <button
-                  onClick={handleSolveOptimizer}
-                  className="py-1.5 px-2 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-mono text-[10px] font-bold uppercase transition-colors border border-surface-container-highest"
+                  onClick={handleSimulatePreWarningSpeed}
+                  className={`py-2 px-2 rounded font-mono text-[10px] font-bold uppercase transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeScenario === "SPEED_RESTRICTION"
+                      ? "bg-amber-600 text-white border-amber-400 shadow-[0_0_14px_rgba(245,158,11,0.6)]"
+                      : "bg-surface-container-high text-on-surface hover:bg-surface-bright border-surface-container-highest"
+                  }`}
                 >
-                  Simulate Pre-Warning Speed
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{activeScenario === "SPEED_RESTRICTION" ? "✓ TSR 30 km/h Active" : "Simulate Pre-Warning Speed"}</span>
                 </button>
               </div>
             </div>

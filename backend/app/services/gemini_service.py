@@ -42,9 +42,9 @@ class GeminiService:
             return cls._heuristic_fallback(raw_text)
 
         # Candidate models to try in order of capability
-        candidate_models = ["gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.5-flash"]
+        candidate_models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=35.0) as client:
             for model_name in candidate_models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
                 payload = {
@@ -71,7 +71,14 @@ class GeminiService:
                         if candidates:
                             content_parts = candidates[0].get("content", {}).get("parts", [])
                             if content_parts:
-                                json_str = content_parts[0].get("text", "{}")
+                                json_str = content_parts[0].get("text", "{}").strip()
+                                if json_str.startswith("```json"):
+                                    json_str = json_str[7:]
+                                if json_str.startswith("```"):
+                                    json_str = json_str[3:]
+                                if json_str.endswith("```"):
+                                    json_str = json_str[:-3]
+                                json_str = json_str.strip()
                                 parsed = json.loads(json_str)
                                 parsed["ai_model_used"] = model_name
                                 return parsed

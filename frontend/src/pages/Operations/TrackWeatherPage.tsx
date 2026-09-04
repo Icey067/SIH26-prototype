@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "@/components/common/PageMeta";
 import { WeatherThermalWidget } from "@/components/dashboard/WeatherThermalWidget";
 import { RailwayAPI } from "@/services/api";
 import { wsService } from "@/services/websocket";
-import { WeatherTelemetry } from "@/types/railway";
-import { PieChart, Thermometer, Wind, Droplets, Sun, AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
+import { WeatherReport } from "@/types/railway";
+import { Thermometer, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export default function TrackWeatherPage() {
-  const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
+  const [weather, setWeather] = useState<WeatherReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
 
   const loadData = async () => {
     setLoading(true);

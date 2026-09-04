@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "@/components/common/PageMeta";
 import { CorridorRadar } from "@/components/dashboard/CorridorRadar";
 import { RailwayAPI } from "@/services/api";
 import { wsService } from "@/services/websocket";
 import { TrainTelemetry, MaintenanceBlock } from "@/types/railway";
-import { Radio, Activity, Shield, Train, AlertTriangle, ArrowUpRight, Compass, RefreshCw } from "lucide-react";
+import { Train, RefreshCw, AlertTriangle } from "lucide-react";
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,8 @@ export default function CorridorRadarPage() {
 
   const filteredTrains = trains.filter((t) => {
     if (selectedDirection === "ALL") return true;
-    return t.direction === selectedDirection;
+    const dir = t.line === "UP" ? "UP" : "DN";
+    return dir === selectedDirection;
   });
 
   return (
@@ -148,24 +150,24 @@ export default function CorridorRadarPage() {
                 </thead>
                 <tbody className="divide-y divide-surface-container-high/60">
                   {filteredTrains.map((train) => (
-                    <tr key={train.train_id} className="hover:bg-surface-container/50 transition-colors">
+                    <tr key={train.train_number} className="hover:bg-surface-container/50 transition-colors">
                       <td className="py-2.5 px-4 font-bold text-white flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-primary" />
-                        {train.train_name || train.train_id}
+                        {train.train_name || train.train_number}
                       </td>
                       <td className="py-2.5 px-4 text-on-surface-variant">{train.train_type || "EXPRESS"}</td>
                       <td className="py-2.5 px-4">
                         <span
                           className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            train.direction === "UP"
+                            train.line === "UP"
                               ? "bg-cyan-950/80 text-cyan-400 border border-cyan-500/30"
                               : "bg-emerald-950/80 text-emerald-400 border border-emerald-500/30"
                           }`}
                         >
-                          {train.direction} LINE
+                          {train.line} LINE
                         </span>
                       </td>
-                      <td className="py-2.5 px-4 font-bold text-white">{train.speed_kmh} KM/H</td>
+                      <td className="py-2.5 px-4 font-bold text-white">{train.speed_kmph} KM/H</td>
                       <td className="py-2.5 px-4 text-on-surface-variant">KM {train.current_km.toFixed(1)}</td>
                       <td className="py-2.5 px-4">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">
@@ -178,6 +180,7 @@ export default function CorridorRadarPage() {
                 </tbody>
               </table>
             </CardContent>
+
           </Card>
 
           {/* Speed Restrictions & Section Advisory Card */}
