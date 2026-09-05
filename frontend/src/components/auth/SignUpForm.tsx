@@ -41,6 +41,10 @@ export default function SignUpForm() {
       setErrorMsg("Please fill in all mandatory officer fields.");
       return;
     }
+    if (!password || password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long.");
+      return;
+    }
     if (!agreedGsr) {
       setErrorMsg("You must accept G&SR regulatory conditions to register.");
       return;

@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
+import { Enhanced2DView } from "@/components/dashboard/Enhanced2DView";
 
 interface HUDToast {
   id: string;
@@ -796,244 +797,20 @@ export default function Dashboard() {
               />
             </div>
           ) : (
-            <div className="relative w-full rounded bg-surface-container-lowest overflow-hidden border border-surface-container-high">
-              {/* Top Time Slot Header */}
-            <div className="grid grid-cols-7 pl-28 pr-4 py-1.5 bg-surface-container text-on-surface-variant font-mono text-[11px] border-b border-surface-container-high">
-              <div>00:00</div>
-              <div>02:00</div>
-              <div>04:00</div>
-              <div>06:00</div>
-              <div>08:00</div>
-              <div>10:00</div>
-              <div className="text-right">12:00</div>
-            </div>
-
-            <div className="relative flex w-full h-[380px]">
-              {/* Y-Axis Stations Labels Rail */}
-              <div className="w-28 flex flex-col justify-between py-2 px-2.5 bg-surface-container-low font-mono text-xs text-on-surface-variant select-none border-r border-surface-container-high">
-                <div className="flex flex-col">
-                  <span className="text-primary font-bold">GZB (0km)</span>
-                  <span className="text-[9px] text-outline">GHAZIABAD</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-on-surface font-semibold">ALJN (106km)</span>
-                  <span className="text-[9px] text-outline">ALIGARH JN</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-on-surface font-semibold">TDL (205km)</span>
-                  <span className="text-[9px] text-outline">TUNDLA JN</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-on-surface font-semibold">ETW (297km)</span>
-                  <span className="text-[9px] text-outline">ETAWAH JN</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-primary font-bold">CNB (440km)</span>
-                  <span className="text-[9px] text-outline">KANPUR CTRL</span>
-                </div>
-              </div>
-
-              {/* Interactive SVG Chart Plane */}
-              <div className="relative flex-1 h-full bg-surface-container-lowest">
-                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 380">
-                  <defs>
-                    <pattern id="marey-grid" width="133.33" height="76" patternUnits="userSpaceOnUse">
-                      <rect width="133.33" height="76" fill="none" />
-                      <path d="M 133.33 0 L 0 0 0 76" fill="none" stroke="#1c1f2a" strokeWidth="1" />
-                    </pattern>
-                    {/* Shading pattern for Bundled Maintenance Block */}
-                    <pattern id="possession-stripe" width="12" height="12" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                      <line x1="0" y1="0" x2="0" y2="12" stroke="#ee9800" strokeWidth="3" opacity="0.45" />
-                    </pattern>
-                    {/* Pulsing Gradient for Conflict Intersection */}
-                    <radialGradient id="conflict-glow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#ffb4ab" stopOpacity="0.9" />
-                      <stop offset="60%" stopColor="#93000a" stopOpacity="0.4" />
-                      <stop offset="100%" stopColor="#ffb4ab" stopOpacity="0" />
-                    </radialGradient>
-                  </defs>
-
-                  {/* Background Grid Layer */}
-                  <rect width="800" height="380" fill="url(#marey-grid)" />
-
-                  {/* Horizontal Major Station Rails */}
-                  <line x1="0" y1="10" x2="800" y2="10" stroke="#262a35" strokeWidth="1" />
-                  <line x1="0" y1="95" x2="800" y2="95" stroke="#262a35" strokeWidth="1" />
-                  <line x1="0" y1="185" x2="800" y2="185" stroke="#262a35" strokeWidth="1" />
-                  <line x1="0" y1="270" x2="800" y2="270" stroke="#262a35" strokeWidth="1" />
-                  <line x1="0" y1="370" x2="800" y2="370" stroke="#262a35" strokeWidth="1" />
-
-                  {/* BUNDLED POSSESSION BLOCK: Block A-14 (ALJN-TDL km 112-140, Time 02:30 to 05:00) */}
-                  <g id="block-a14">
-                    <rect x="166" y="98" width="167" height="35" rx="2" fill="url(#possession-stripe)" />
-                    <rect x="166" y="98" width="167" height="35" rx="2" fill="#ee9800" fillOpacity="0.12" stroke="#ee9800" strokeWidth="1.5" />
-                    <text x="172" y="112" fill="#ffddb8" fontFamily="JetBrains Mono" fontSize="9" fontWeight="700">
-                      BLOCK A-14: TMS+TDMS BUNDLED
-                    </text>
-                    <text x="172" y="125" fill="#ee9800" fontFamily="JetBrains Mono" fontSize="8">
-                      02:30 - 05:00 | BCM DEEP SCREEN + OHE
-                    </text>
-                  </g>
-
-                  {/* BUNDLED POSSESSION BLOCK 2: Block B-09 (TDL Outer km 205-218, Time 07:30 to 09:45) */}
-                  <g id="block-b09">
-                    <rect x="500" y="180" width="150" height="30" rx="2" fill="url(#possession-stripe)" />
-                    <rect x="500" y="180" width="150" height="30" rx="2" fill="#4edea3" fillOpacity="0.1" stroke="#4edea3" strokeWidth="1.5" />
-                    <text x="506" y="194" fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize="9" fontWeight="700">
-                      BLOCK B-09: POINT MACHINE (SMMS)
-                    </text>
-                    <text x="506" y="205" fill="#4edea3" fontFamily="JetBrains Mono" fontSize="8">
-                      07:30 - 09:45 | TDL INTERLOCK
-                    </text>
-                  </g>
-
-                  {/* CONFLICT ZONE C-04: TMS Rail Renewal clashing with Rajdhani */}
-                  {highlightConflicts && (
-                    <g className="cursor-pointer" id="conflict-zone-04">
-                      {conflictZoneResolved ? (
-                        activeScenario === "REROUTE" ? (
-                          <>
-                            <rect x="245" y="148" width="90" height="42" fill="#022c22" fillOpacity="0.85" stroke="#10b981" strokeWidth="1.5" rx="3" />
-                            <text x="290" y="165" fill="#34d399" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">3RD LINE DIVERSION</text>
-                            <text x="290" y="179" fill="#10b981" fontSize="7" fontFamily="JetBrains Mono" textAnchor="middle">+3m NET HEADWAY</text>
-                          </>
-                        ) : activeScenario === "SPEED_RESTRICTION" ? (
-                          <>
-                            <rect x="245" y="148" width="90" height="42" fill="#451a03" fillOpacity="0.85" stroke="#f59e0b" strokeWidth="1.5" rx="3" />
-                            <text x="290" y="165" fill="#fbbf24" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">TSR 30 KM/H ORDER</text>
-                            <text x="290" y="179" fill="#f59e0b" fontSize="7" fontFamily="JetBrains Mono" textAnchor="middle">SAFE APPROACH</text>
-                          </>
-                        ) : (
-                          <>
-                            <rect x="260" y="160" width="60" height="38" fill="#005236" fillOpacity="0.8" stroke="#4edea3" strokeWidth="1.5" rx="3" />
-                            <text x="290" y="183" fill="#4edea3" fontSize="9" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">RESOLVED</text>
-                          </>
-                        )
-                      ) : (
-                        <>
-                          <rect x="260" y="160" width="55" height="38" rx="3" fill="#93000a" fillOpacity="0.25" stroke="#ffb4ab" strokeWidth="1.5" strokeDasharray="2 2" />
-                          <circle cx="288" cy="179" r="14" fill="url(#conflict-glow)" />
-                          <circle cx="288" cy="179" r="4" fill="#ffb4ab" />
-                        </>
-                      )}
-                    </g>
-                  )}
-
-                  {/* TRAIN PATH STRINGS (TRAJECTORIES) */}
-                  {/* 1. Train 12424 Dibrugarh Rajdhani Express (UP Main / Diverted / TSR) */}
-                  {activeScenario === "REROUTE" ? (
-                    <>
-                      <path d="M 83 10 L 195 95 L 260 155 L 320 220 L 375 270 L 440 370" fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" />
-                      <path d="M 260 155 L 320 220" fill="none" stroke="#34d399" strokeWidth="4" strokeDasharray="3 3" />
-                    </>
-                  ) : activeScenario === "SPEED_RESTRICTION" ? (
-                    <>
-                      <path d="M 83 10 L 195 95 L 260 155 L 340 240 L 385 270 L 452 370" fill="none" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
-                    </>
-                  ) : (
-                    <>
-                      <path d="M 83 10 L 195 95 L 288 179 L 360 270 L 440 370" fill="none" stroke={activeScenario === "CP_SAT" ? "#00f0ff" : "#4cd7f6"} strokeWidth="3" strokeLinecap="round" />
-                      {!conflictZoneResolved && (
-                        <path d="M 288 179 L 340 270 L 495 370" fill="none" stroke="#ffb4ab" strokeWidth="2" strokeDasharray="4 3" />
-                      )}
-                    </>
-                  )}
-
-                  {/* 2. Train 12004 Lucknow Shatabdi Express (UP Fast) */}
-                  <path d="M 400 10 L 485 95 L 565 185 L 635 270 L 710 370" fill="none" stroke="#4cd7f6" strokeWidth="2.5" strokeLinecap="round" />
-
-                  {/* 3. Train 22436 Vande Bharat Express (DN High Speed - Opposing Trajectory) */}
-                  <path d="M 133 370 L 210 270 L 305 185 L 375 95 L 435 10" fill="none" stroke="#ffb95f" strokeWidth="2.5" strokeLinecap="round" />
-
-                  {/* 4. Train 12301 Howrah Rajdhani Express (DN Main) */}
-                  <path d="M 480 370 L 555 270 L 640 185 L 720 95 L 785 10" fill="none" stroke="#acedff" strokeWidth="2" strokeDasharray="5 2" />
-
-                  {/* 5. Freight Goods Container BCNHL-640 (Slow Freight - Shallow Angle) */}
-                  <path d="M 20 10 L 180 95 L 380 185 L 590 270 L 790 370" fill="none" stroke="#869397" strokeWidth="1.8" />
-
-                  {/* 6. POL Petroleum Tanker Special (Slow Freight) */}
-                  <path d="M 250 10 L 440 95 L 670 185" fill="none" stroke="#869397" strokeWidth="1.5" strokeDasharray="2 2" />
-
-                  {/* Train Label Badges on String Chart */}
-                  <g transform="translate(195, 78)">
-                    <rect
-                      x="0"
-                      y="0"
-                      width={activeScenario === "REROUTE" ? 85 : activeScenario === "SPEED_RESTRICTION" ? 85 : 75}
-                      height="15"
-                      rx="2"
-                      fill={activeScenario === "REROUTE" ? "#022c22" : activeScenario === "SPEED_RESTRICTION" ? "#451a03" : "#003640"}
-                      stroke={activeScenario === "REROUTE" ? "#10b981" : activeScenario === "SPEED_RESTRICTION" ? "#f59e0b" : "#4cd7f6"}
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={activeScenario === "REROUTE" ? 42 : activeScenario === "SPEED_RESTRICTION" ? 42 : 37}
-                      y="11"
-                      fill={activeScenario === "REROUTE" ? "#34d399" : activeScenario === "SPEED_RESTRICTION" ? "#fbbf24" : "#4cd7f6"}
-                      fontSize="8"
-                      fontFamily="JetBrains Mono"
-                      fontWeight="700"
-                      textAnchor="middle"
-                    >
-                      {activeScenario === "REROUTE" ? "12424 RAJ (3RD L)" : activeScenario === "SPEED_RESTRICTION" ? "12424 RAJ (TSR30)" : "12424 RAJ (UP)"}
-                    </text>
-                  </g>
-                  <g transform="translate(240, 240)">
-                    <rect x="0" y="0" width="72" height="15" rx="2" fill="#472a00" stroke="#ffb95f" strokeWidth="1" />
-                    <text x="36" y="11" fill="#ffb95f" fontSize="8" fontFamily="JetBrains Mono" fontWeight="700" textAnchor="middle">22436 VB (DN)</text>
-                  </g>
-                  <g transform="translate(565, 290)">
-                    <rect x="0" y="0" width="80" height="15" rx="2" fill="#0a0e18" stroke="#869397" strokeWidth="1" />
-                    <text x="40" y="11" fill="#dfe2f1" fontSize="8" fontFamily="JetBrains Mono" fontWeight="500" textAnchor="middle">BCNHL-640 (FRT)</text>
-                  </g>
-                </svg>
-
-                {/* Floating Conflict Marker Hover Dialog (Positioned at Conflict C-04) */}
-                {highlightConflicts && !conflictZoneResolved && (
-                  <div className="absolute left-[34%] top-[42%] z-20 pointer-events-auto">
-                    <div className="relative flex flex-col p-2.5 rounded bg-surface-container-high shadow-xl text-on-surface max-w-xs -translate-x-1/2 border border-error/40">
-                      <div className="flex items-center justify-between gap-2 pb-1">
-                        <span className="flex items-center gap-1 font-mono text-[10px] text-error font-bold uppercase">
-                          <AlertTriangle className="h-3 w-3" /> Conflict C-04 [km 184]
-                        </span>
-                        <span className="font-mono text-[10px] text-error font-bold">ETA 04:18 IST</span>
-                      </div>
-                      <p className="text-[11px] leading-tight text-on-surface">
-                        Clash: <strong className="text-secondary">Track Renewal TMS-8841</strong> on UP line vs <strong className="text-primary">12424 Rajdhani</strong>.
-                      </p>
-                      <div className="mt-1 flex items-center justify-between pt-1 border-t border-surface-container">
-                        <span className="font-mono text-[10px] text-error font-semibold">+42m Delay Projected</span>
-                        <button onClick={handleSolveOptimizer} className="font-mono text-[9px] text-primary underline cursor-pointer hover:text-white">
-                          Resolve via CP-SAT
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Current Time Vertical Cursor Indicator */}
-                <div className="absolute top-0 bottom-0 left-[28%] w-px bg-primary pointer-events-none shadow-[0_0_8px_#4cd7f6]">
-                  <div className="absolute top-0 -left-6 px-1 rounded bg-primary text-on-primary font-mono text-[9px] font-bold shadow-md">
-                    {currentTime.slice(0, 5)} IST
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Graph Legend and Action Footer */}
-            <div className="flex items-center justify-between px-3 py-1.5 bg-surface-container-low text-on-surface-variant font-mono text-[10px] border-t border-surface-container-high">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-primary"></span> Rajdhani / Shatabdi Premium</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-secondary"></span> Vande Bharat Semi-High Speed</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-outline"></span> Scheduled Freight / BOXN</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-1 bg-secondary opacity-60"></span> Maintenance Block Zone</span>
-              </div>
-              <span className="font-mono text-[9px] text-outline">
-                {conflictZoneResolved ? "STATUS: CONFLICT MITIGATED" : "STATUS: CRITICAL CLASH AT TDL"}
-              </span>
-            </div>
-          </div>
+            <Enhanced2DView
+              trains={trains}
+              blocks={blocks}
+              currentTime={currentTime}
+              activeScenario={activeScenario}
+              conflictZoneResolved={conflictZoneResolved}
+              highlightConflicts={highlightConflicts}
+              selectedDirection={selectedDirection}
+              onTriggerSolver={handleSolveOptimizer}
+              onTriggerReroute={handleAutoReroute3rdLine}
+              onTriggerSpeedSim={handleSimulatePreWarningSpeed}
+            />
           )}
+
         </section>
 
         {/* ─── BOTTOM ROW: Tactical Decision Matrix & Possession Backlog ───────────── */}

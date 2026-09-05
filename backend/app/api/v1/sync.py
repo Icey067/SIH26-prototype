@@ -224,3 +224,26 @@ def verify_block_lease(req: LeaseVerificationRequest, db: Session = Depends(get_
         audible_warning=verification["audible_warning"],
         reason=verification["reason"]
     )
+
+@router.get("/status")
+def get_sync_status(db: Session = Depends(get_db)):
+    """Health & statistics check for Mobile Offline Sync and IronSentinel gateway."""
+    active_leases_count = db.query(MaintenanceBlock).filter(
+        MaintenanceBlock.status.in_([
+            BlockStatus.APPROVED,
+            BlockStatus.STATION_MASTER_CONCURRED,
+            BlockStatus.IN_PROGRESS
+        ])
+    ).count()
+
+    unsynced_defects_count = db.query(Defect).filter(
+        Defect.sync_status != SyncStatus.SYNCED
+    ).count()
+
+    return {
+        "status": "OPERATIONAL",
+        "timestamp": datetime.utcnow().isoformat(),
+        "active_leases_count": active_leases_count,
+        "pending_upstream_defects": unsynced_defects_count,
+        "protocol_version": "v1.2-HMAC-SHA256"
+    }

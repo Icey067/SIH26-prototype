@@ -284,9 +284,85 @@ function ContinuousTrackLine({
   );
 }
 
-// ─── Overhead Railway Electrification Gantries ────────────────────────────────
-function OverheadCatenaryGantries() {
+// ─── Overhead Railway Electrification Gantries with Dynamic Block Signaling ───
+function OverheadCatenaryGantries({
+  train1Ref,
+  train2Ref,
+  train3Ref,
+  rerouteActive = false,
+}: {
+  train1Ref?: React.RefObject<THREE.Group | null>;
+  train2Ref?: React.RefObject<THREE.Group | null>;
+  train3Ref?: React.RefObject<THREE.Group | null>;
+  rerouteActive?: boolean;
+}) {
   const gantryX = [-22, -14, -6, 2, 10, 18, 26];
+  const signalMeshesRef = useRef<(THREE.Mesh | null)[]>([]);
+  const signalLightsRef = useRef<(THREE.PointLight | null)[]>([]);
+
+  useFrame(() => {
+    if (!train1Ref?.current || !train2Ref?.current || !train3Ref?.current) return;
+    const p1 = train1Ref.current.position;
+    const p2 = train2Ref.current.position;
+    const p3 = train3Ref.current.position;
+
+    // Check if Turnout #34-B is currently occupied by Train 2
+    const isCrossoverOccupied = rerouteActive && p2.x >= 6.5 && p2.x <= 19.5;
+
+    gantryX.forEach((gx, gIdx) => {
+      [-3.2, 0, 3.2].forEach((gz, sIdx) => {
+        const flatIdx = gIdx * 3 + sIdx;
+        const mesh = signalMeshesRef.current[flatIdx];
+        const light = signalLightsRef.current[flatIdx];
+        if (!mesh || !light) return;
+
+        let color = "#10b981"; // Default Green (clear)
+
+        if (gz === -3.2) {
+          // Track 01 (UP Fast Line, train direction +X)
+          const t1InBlock = p1.x >= gx - 1.0 && p1.x < gx + 8.0;
+          const t2InBlock = (!rerouteActive || p2.x < 8) && p2.x >= gx - 1.0 && p2.x < gx + 8.0;
+          const t1InApproach = p1.x >= gx + 8.0 && p1.x < gx + 16.0;
+          const t2InApproach = (!rerouteActive || p2.x < 8) && p2.x >= gx + 8.0 && p2.x < gx + 16.0;
+
+          if (t1InBlock || t2InBlock) {
+            color = "#ef4444"; // Red (Occupied)
+          } else if (t1InApproach || t2InApproach) {
+            color = "#f59e0b"; // Yellow (Caution)
+          }
+        } else if (gz === 0.0) {
+          // Track 02 (DOWN Mainline, train direction -X)
+          if (isCrossoverOccupied && (gx === 18 || gx === 26)) {
+            color = "#ef4444"; // Red (Interlocking Hold before Turnout #34-B)
+          } else {
+            const t3InBlock = p3.x <= gx + 1.0 && p3.x > gx - 8.0;
+            const t3InApproach = p3.x <= gx - 8.0 && p3.x > gx - 16.0;
+            if (t3InBlock) {
+              color = "#ef4444"; // Red
+            } else if (t3InApproach) {
+              color = "#f59e0b"; // Yellow
+            }
+          }
+        } else if (gz === 3.2) {
+          // Track 03 (Loop Overtake Line)
+          if (rerouteActive) {
+            const t2InBlock = p2.z > 1.0 && p2.x >= gx - 1.0 && p2.x < gx + 8.0;
+            const t2InApproach = p2.z > 1.0 && p2.x >= gx + 8.0 && p2.x < gx + 16.0;
+            if (t2InBlock) {
+              color = "#ef4444";
+            } else if (t2InApproach) {
+              color = "#f59e0b";
+            }
+          } else {
+            color = "#f59e0b"; // Amber (Inactive siding warning)
+          }
+        }
+
+        (mesh.material as THREE.MeshBasicMaterial).color.set(color);
+        light.color.set(color);
+      });
+    });
+  });
 
   return (
     <group>
@@ -319,8 +395,7 @@ function OverheadCatenaryGantries() {
           </mesh>
 
           {[-3.2, 0, 3.2].map((z, sIdx) => {
-            const isGreen = idx % 2 === 0 || sIdx === 0;
-            const signalColor = isGreen ? "#10b981" : "#f59e0b";
+            const flatIdx = idx * 3 + sIdx;
 
             return (
               <group key={`sig-${z}`} position={[0, 3.0, z]}>
@@ -332,11 +407,20 @@ function OverheadCatenaryGantries() {
                   <boxGeometry args={[0.15, 0.22, 0.12]} />
                   <meshStandardMaterial color="#0f172a" />
                 </mesh>
-                <mesh position={[0, -0.2, 0.27]}>
+                <mesh
+                  ref={(el) => { signalMeshesRef.current[flatIdx] = el; }}
+                  position={[0, -0.2, 0.27]}
+                >
                   <sphereGeometry args={[0.05, 8, 8]} />
-                  <meshBasicMaterial color={signalColor} />
+                  <meshBasicMaterial color="#10b981" />
                 </mesh>
-                <pointLight color={signalColor} intensity={1.2} distance={3} position={[0, -0.2, 0.35]} />
+                <pointLight
+                  ref={(el) => { signalLightsRef.current[flatIdx] = el; }}
+                  color="#10b981"
+                  intensity={1.2}
+                  distance={3}
+                  position={[0, -0.2, 0.35]}
+                />
               </group>
             );
           })}
@@ -350,9 +434,15 @@ function OverheadCatenaryGantries() {
 function RailwayCorridorTracks({
   rerouteActive = false,
   speedRestrictionActive = false,
+  train1Ref,
+  train2Ref,
+  train3Ref,
 }: {
   rerouteActive?: boolean;
   speedRestrictionActive?: boolean;
+  train1Ref?: React.RefObject<THREE.Group | null>;
+  train2Ref?: React.RefObject<THREE.Group | null>;
+  train3Ref?: React.RefObject<THREE.Group | null>;
 }) {
   return (
     <group position={[0, 0, 0]}>
@@ -397,12 +487,12 @@ function RailwayCorridorTracks({
         maintenanceEnd={22}
       />
 
-      {/* Turnout Crossover */}
-      <group position={[14, 0.18, 1.6]} rotation={[0, -Math.PI / 8.5, 0]}>
+      {/* Turnout Crossover from Track 01 (Z=-3.2) to Track 03 (Z=3.2) across Track 02 (Z=0) */}
+      <group position={[13.0, 0.18, 0.0]} rotation={[0, -0.569, 0]}>
         <mesh position={[0, 0.08, -0.45]}>
-          <boxGeometry args={[7.2, 0.1, 0.06]} />
+          <boxGeometry args={[12.2, 0.1, 0.06]} />
           <meshStandardMaterial
-            color={rerouteActive ? "#10b981" : "#e2e8f0"}
+            color={rerouteActive ? "#10b981" : "#94a3b8"}
             emissive={rerouteActive ? "#059669" : "#000000"}
             emissiveIntensity={rerouteActive ? 2.5 : 0}
             metalness={0.95}
@@ -410,26 +500,33 @@ function RailwayCorridorTracks({
           />
         </mesh>
         <mesh position={[0, 0.08, 0.45]}>
-          <boxGeometry args={[7.2, 0.1, 0.06]} />
+          <boxGeometry args={[12.2, 0.1, 0.06]} />
           <meshStandardMaterial
-            color={rerouteActive ? "#10b981" : "#e2e8f0"}
+            color={rerouteActive ? "#10b981" : "#94a3b8"}
             emissive={rerouteActive ? "#059669" : "#000000"}
             emissiveIntensity={rerouteActive ? 2.5 : 0}
             metalness={0.95}
             roughness={0.15}
           />
         </mesh>
+        {/* Angled turnout sleepers */}
+        {Array.from({ length: 14 }).map((_, i) => (
+          <mesh key={`to-slp-${i}`} position={[-5.5 + i * 0.85, 0.02, 0]}>
+            <boxGeometry args={[0.28, 0.06, 1.4]} />
+            <meshStandardMaterial color="#475569" roughness={0.8} />
+          </mesh>
+        ))}
         <pointLight
           color={rerouteActive ? "#10b981" : "#00f0ff"}
-          intensity={rerouteActive ? 5.5 : 2}
-          distance={6}
+          intensity={rerouteActive ? 5.5 : 1.5}
+          distance={7}
           position={[0, 0.4, 0]}
         />
         {rerouteActive && (
-          <Html position={[0, 2.0, 0]} center distanceFactor={14} zIndexRange={[60, 0]}>
+          <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[60, 0]}>
             <div className="px-2.5 py-1 bg-emerald-950/95 border border-emerald-400 rounded text-[9px] font-mono text-emerald-300 font-bold uppercase whitespace-nowrap shadow-xl flex items-center gap-1.5 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>TURNOUT #34-B // 3RD LINE BYPASS ENGAGED</span>
+              <span>TURNOUT #34-B // 3RD LINE BYPASS ENGAGED (INTERLOCKED)</span>
             </div>
           </Html>
         )}
@@ -514,7 +611,12 @@ function RailwayCorridorTracks({
         </Html>
       </group>
 
-      <OverheadCatenaryGantries />
+      <OverheadCatenaryGantries
+        train1Ref={train1Ref}
+        train2Ref={train2Ref}
+        train3Ref={train3Ref}
+        rerouteActive={rerouteActive}
+      />
     </group>
   );
 }
@@ -611,22 +713,24 @@ function IsometricCityscape() {
   );
 }
 
-// ─── Live Train Fleet with Real-Time Telemetry Data Binding ───────────────────
+// ─── Live Train Fleet with Real-Time Telemetry & Kavach Headway Engine ───────
 function LiveTrainFleet({
   liveTrains,
   rerouteActive = false,
   speedRestrictionActive = false,
   activeScenario = "NONE",
+  train1Ref,
+  train2Ref,
+  train3Ref,
 }: {
   liveTrains: TrainTelemetry[];
   rerouteActive?: boolean;
   speedRestrictionActive?: boolean;
   activeScenario?: "NONE" | "CP_SAT" | "REROUTE" | "SPEED_RESTRICTION";
+  train1Ref: React.RefObject<THREE.Group | null>;
+  train2Ref: React.RefObject<THREE.Group | null>;
+  train3Ref: React.RefObject<THREE.Group | null>;
 }) {
-  const train1Ref = useRef<THREE.Group>(null);
-  const train2Ref = useRef<THREE.Group>(null);
-  const train3Ref = useRef<THREE.Group>(null);
-
   // Match live trains from backend or fallback to monitored fleet
   const t1 = liveTrains.find((t) => t.train_number === "22436") || liveTrains[0] || {
     train_number: "22436",
@@ -658,54 +762,248 @@ function LiveTrainFleet({
     current_km: 54.0,
   };
 
+  // Actual instantaneous velocities managed smoothly in useFrame
+  const v1Actual = useRef((t1.speed_kmph || 125) * 0.035);
+  const v2Actual = useRef((t2.speed_kmph || 110) * 0.032);
+  const v3Actual = useRef((t3.speed_kmph || 65) * 0.040);
+
+  // Status records updated in useFrame and synchronized to state at 6 FPS
+  const t1StatusRef = useRef<{ mode: string; text: string }>({
+    mode: "NORMAL",
+    text: `LEAD EXPRESS // ${t1.speed_kmph} KM/H • TRACK CLEAR`,
+  });
+
+  const t2StatusRef = useRef<{ mode: string; text: string }>({
+    mode: "NORMAL",
+    text: `TRAILING EXPRESS // ${t2.speed_kmph} KM/H • TRACK CLEAR`,
+  });
+
+  const t3StatusRef = useRef<{ isHolding: boolean; text: string }>({
+    isHolding: false,
+    text: `DN MAINLINE FREIGHT // ${t3.speed_kmph} KM/H • CLEAR`,
+  });
+
+  const [hudState, setHudState] = useState({
+    t1Text: "LEAD EXPRESS // 130 KM/H • TRACK CLEAR",
+    t1Mode: "NORMAL",
+    t2Text: "TRAILING EXPRESS // 120 KM/H • TRACK CLEAR",
+    t2Mode: "NORMAL",
+    t3Text: "DN MAINLINE FREIGHT // 65 KM/H • CLEAR",
+    t3Holding: false,
+  });
+
+  const frameCounter = useRef(0);
+
   useFrame((_, delta) => {
-    // Kinematic translation speed dynamically scaled by real speed_kmph from API
-    const v1Speed = (t1.speed_kmph || 125) * 0.035;
-    let v2Speed = (t2.speed_kmph || 110) * 0.032;
+    if (!train1Ref.current || !train2Ref.current || !train3Ref.current) return;
+
+    const dt = Math.min(delta, 0.1);
+
+    // Dynamic base velocities from API
+    const v1Base = (t1.speed_kmph || 125) * 0.035;
+    let v2Base = (t2.speed_kmph || 110) * 0.032;
 
     if (speedRestrictionActive) {
-      v2Speed = 30 * 0.035; // 30 km/h caution order
+      v2Base = 30 * 0.035; // TSR 30 km/h caution order
     } else if (rerouteActive) {
-      v2Speed = 85 * 0.032; // 85 km/h loop line cruising
+      v2Base = 85 * 0.032; // Loop line cruising speed
     }
 
-    const v3Speed = (t3.speed_kmph || 65) * 0.040;
+    const v3Base = (t3.speed_kmph || 65) * 0.040;
 
-    if (train1Ref.current) {
-      train1Ref.current.position.x += delta * v1Speed;
-      if (train1Ref.current.position.x > 26) train1Ref.current.position.x = -26;
-    }
+    const pos1 = train1Ref.current.position;
+    const pos2 = train2Ref.current.position;
+    const pos3 = train3Ref.current.position;
 
-    if (train2Ref.current) {
-      train2Ref.current.position.x += delta * v2Speed;
-      if (train2Ref.current.position.x > 26) {
-        train2Ref.current.position.x = -26;
-      }
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. KAVACH AUTOMATIC TRAIN PROTECTION (ATP) HEADWAY ON TRACK 01 (Z = -3.2)
+    // ─────────────────────────────────────────────────────────────────────────
+    const bothOnTrack1 = !rerouteActive || (pos2.x < 8 && pos2.z < -2.0);
 
-      // Handle 3D Rerouting across crossover switch
-      if (rerouteActive) {
-        const x = train2Ref.current.position.x;
-        if (x < 8) {
-          train2Ref.current.position.z = -3.2;
-          train2Ref.current.rotation.y = 0;
-        } else if (x >= 8 && x <= 18) {
-          // Transition smoothly from Z = -3.2 (Track 1) to Z = 3.2 (Track 3)
-          const progress = (x - 8) / 10;
-          train2Ref.current.position.z = -3.2 + progress * 6.4;
-          train2Ref.current.rotation.y = -0.32; // angled traversing switch
+    let desiredSpeed1 = v1Base;
+    let desiredSpeed2 = v2Base;
+
+    const TRACK_LEN = 52.0; // Corridor domain [-26, 26]
+    const EMERGENCY_STOP_GAP = 9.2; // Absolute minimum physical clearance
+    const CAUTION_SLOW_GAP = 18.0;   // Yellow aspect deceleration zone
+
+    if (bothOnTrack1) {
+      // Forward circular distance from Train 2 to Train 1 in +X direction:
+      const dist2to1 = ((pos1.x - pos2.x) % TRACK_LEN + TRACK_LEN) % TRACK_LEN;
+      // Forward circular distance from Train 1 to Train 2 in +X direction:
+      const dist1to2 = ((pos2.x - pos1.x) % TRACK_LEN + TRACK_LEN) % TRACK_LEN;
+
+      if (dist2to1 <= dist1to2) {
+        // Train 1 is ahead of Train 2! Train 2 is trailing.
+        const gap = dist2to1;
+
+        if (activeScenario === "CP_SAT") {
+          // CP-SAT mathematically synchronized slot (optimal headway ~20m)
+          if (gap < 20) {
+            desiredSpeed2 = v1Actual.current * 0.85;
+            t2StatusRef.current.mode = "CP_SAT";
+            t2StatusRef.current.text = `CP-SAT SYNCHRONIZED // GAP ${gap.toFixed(1)}m • AUTHORIZED`;
+          } else {
+            desiredSpeed2 = desiredSpeed1;
+            t2StatusRef.current.mode = "CP_SAT";
+            t2StatusRef.current.text = `CP-SAT OPTIMAL MATRIX // ZERO DELAY • 120 KM/H`;
+          }
+        } else if (gap <= EMERGENCY_STOP_GAP) {
+          // Red Aspect: Kavach Emergency Stop
+          desiredSpeed2 = 0;
+          t2StatusRef.current.mode = "KAVACH_STOP";
+          t2StatusRef.current.text = `KAVACH ATP [RED] // BRAKE APPLIED • GAP ${gap.toFixed(1)}m`;
+        } else if (gap < CAUTION_SLOW_GAP) {
+          // Yellow Aspect: Kavach Caution Speed Regulation
+          const factor = (gap - EMERGENCY_STOP_GAP) / (CAUTION_SLOW_GAP - EMERGENCY_STOP_GAP);
+          desiredSpeed2 = Math.max(0.2, v1Actual.current * factor);
+          t2StatusRef.current.mode = "KAVACH_CAUTION";
+          t2StatusRef.current.text = `KAVACH ATP [CAUTION] // SPEED REGULATED • GAP ${gap.toFixed(1)}m`;
         } else {
-          train2Ref.current.position.z = 3.2;
-          train2Ref.current.rotation.y = 0;
+          t2StatusRef.current.mode = speedRestrictionActive ? "TSR" : "NORMAL";
+          t2StatusRef.current.text = speedRestrictionActive
+            ? `TSR 30 KM/H CAUTION ORDER // KM 170-184`
+            : `${t2.speed_kmph} KM/H • ON-TIME • GAP ${gap.toFixed(1)}m`;
         }
+
+        t1StatusRef.current.mode = "NORMAL";
+        t1StatusRef.current.text = `LEAD EXPRESS // ${t1.speed_kmph} KM/H • TRACK 01 CLEAR`;
       } else {
-        train2Ref.current.position.z = -3.2;
+        // Train 2 is ahead of Train 1! Train 1 is trailing.
+        const gap = dist1to2;
+
+        if (gap <= EMERGENCY_STOP_GAP) {
+          desiredSpeed1 = 0;
+          t1StatusRef.current.mode = "KAVACH_STOP";
+          t1StatusRef.current.text = `KAVACH ATP [RED] // BRAKE APPLIED • GAP ${gap.toFixed(1)}m`;
+        } else if (gap < CAUTION_SLOW_GAP) {
+          const factor = (gap - EMERGENCY_STOP_GAP) / (CAUTION_SLOW_GAP - EMERGENCY_STOP_GAP);
+          desiredSpeed1 = Math.max(0.2, v2Actual.current * factor);
+          t1StatusRef.current.mode = "KAVACH_CAUTION";
+          t1StatusRef.current.text = `KAVACH ATP [CAUTION] // SPEED REGULATED • GAP ${gap.toFixed(1)}m`;
+        } else {
+          t1StatusRef.current.mode = "NORMAL";
+          t1StatusRef.current.text = `LEAD EXPRESS // ${t1.speed_kmph} KM/H • TRACK 01 CLEAR`;
+        }
+
+        t2StatusRef.current.mode = speedRestrictionActive ? "TSR" : "NORMAL";
+        t2StatusRef.current.text = speedRestrictionActive
+          ? `TSR 30 KM/H PRE-WARNING • KM 170-184`
+          : `${t2.speed_kmph} KM/H • LEAD BLOCK CLEAR`;
+      }
+    } else {
+      // Train 2 is on Loop Line (Track 03) or traversing switch
+      t1StatusRef.current.mode = "NORMAL";
+      t1StatusRef.current.text = `UP FAST EXPRESS // ${t1.speed_kmph} KM/H • TRACK 01 CLEAR`;
+
+      t2StatusRef.current.mode = "REROUTED";
+      t2StatusRef.current.text = pos2.x >= 18
+        ? `LOOP OVERTAKE LINE // 85 KM/H • BYPASS CLEAR`
+        : `TURNOUT 34-B TRAVERSAL // ROUTE INTERLOCKED`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. TURNOUT #34-B INTERLOCKING SIGNAL HOLD (TRACK 02 vs TRAIN 3)
+    // ─────────────────────────────────────────────────────────────────────────
+    let desiredSpeed3 = v3Base;
+    const isCrossoverOccupied = rerouteActive && (pos2.x >= 6.5 && pos2.x <= 19.5);
+
+    if (isCrossoverOccupied) {
+      // Train 3 travels towards -X on Track 02. Stop Train 3 before fouling mark at X = 20.8
+      if (pos3.x >= 20.0 && pos3.x <= 25.5) {
+        desiredSpeed3 = 0;
+        t3StatusRef.current.isHolding = true;
+        t3StatusRef.current.text = `INTERLOCKING HOLD [RED] // WAITING TURNOUT 34-B`;
+      } else {
+        t3StatusRef.current.isHolding = false;
+        t3StatusRef.current.text = `DN MAINLINE FREIGHT // ${t3.speed_kmph} KM/H`;
+      }
+    } else {
+      t3StatusRef.current.isHolding = false;
+      t3StatusRef.current.text = `DN MAINLINE FREIGHT // ${t3.speed_kmph} KM/H • CLEAR`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. SMOOTH BRAKING / ACCELERATION DYNAMICS
+    // ─────────────────────────────────────────────────────────────────────────
+    const accel = 3.5;
+    const brake = 8.5;
+
+    v1Actual.current = v1Actual.current > desiredSpeed1
+      ? Math.max(desiredSpeed1, v1Actual.current - dt * brake)
+      : Math.min(desiredSpeed1, v1Actual.current + dt * accel);
+
+    v2Actual.current = v2Actual.current > desiredSpeed2
+      ? Math.max(desiredSpeed2, v2Actual.current - dt * brake)
+      : Math.min(desiredSpeed2, v2Actual.current + dt * accel);
+
+    v3Actual.current = v3Actual.current > desiredSpeed3
+      ? Math.max(desiredSpeed3, v3Actual.current - dt * brake)
+      : Math.min(desiredSpeed3, v3Actual.current + dt * accel);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. POSITION ADVANCEMENT & SAFE WRAP-AROUND QUEUEING
+    // ─────────────────────────────────────────────────────────────────────────
+    // Train 1:
+    pos1.x += dt * v1Actual.current;
+    if (pos1.x > 26) {
+      const entryOccupied = !rerouteActive && (pos2.x >= -26 && pos2.x <= -16);
+      if (!entryOccupied) {
+        pos1.x = -26;
+      } else {
+        pos1.x = 26.2; // Hold at boundary signal until entry clears
+      }
+    }
+
+    // Train 2:
+    pos2.x += dt * v2Actual.current;
+    if (pos2.x > 26) {
+      const entryOccupied = !rerouteActive && (pos1.x >= -26 && pos1.x <= -16);
+      if (!entryOccupied) {
+        pos2.x = -26;
+      } else {
+        pos2.x = 26.2;
+      }
+    }
+
+    // Turnout #34-B Traversal & 3D Alignment for Train 2
+    if (rerouteActive) {
+      const x = pos2.x;
+      if (x < 8) {
+        pos2.z = -3.2;
+        train2Ref.current.rotation.y = 0;
+      } else if (x >= 8 && x <= 18) {
+        const progress = (x - 8) / 10;
+        pos2.z = -3.2 + progress * 6.4;
+        train2Ref.current.rotation.y = -0.569; // Exactly aligns with switch angle
+      } else {
+        pos2.z = 3.2;
         train2Ref.current.rotation.y = 0;
       }
+    } else {
+      pos2.z = -3.2;
+      train2Ref.current.rotation.y = 0;
     }
 
-    if (train3Ref.current) {
-      train3Ref.current.position.x -= delta * v3Speed;
-      if (train3Ref.current.position.x < -26) train3Ref.current.position.x = 26;
+    // Train 3:
+    pos3.x -= dt * v3Actual.current;
+    if (pos3.x < -26) {
+      pos3.x = 26;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. THROTTLED HUD REACTION (6 FPS update for silky smooth HTML)
+    // ─────────────────────────────────────────────────────────────────────────
+    frameCounter.current++;
+    if (frameCounter.current % 10 === 0) {
+      setHudState({
+        t1Text: t1StatusRef.current.text,
+        t1Mode: t1StatusRef.current.mode,
+        t2Text: t2StatusRef.current.text,
+        t2Mode: t2StatusRef.current.mode,
+        t3Text: t3StatusRef.current.text,
+        t3Holding: t3StatusRef.current.isHolding,
+      });
     }
   });
 
@@ -715,62 +1013,9 @@ function LiveTrainFleet({
     return "text-amber-400 border-amber-400/80 bg-amber-950/90";
   };
 
-  const renderTrain2Badge = () => {
-    if (rerouteActive) {
-      return (
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-emerald-400 border-emerald-400/90 bg-emerald-950/95 animate-pulse">
-          <Navigation className="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
-            <span className="text-emerald-300 font-semibold text-[9px]">
-              {train2Ref.current && train2Ref.current.position.x > 8 ? "REROUTED TO 3RD LINE (LOOP BYPASS)" : "APPROACHING TURNOUT 34-B"} • 85 KM/H • +3m NET
-            </span>
-          </div>
-        </div>
-      );
-    }
-    if (speedRestrictionActive) {
-      return (
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-amber-400 border-amber-400/90 bg-amber-950/95 animate-pulse">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" />
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
-            <span className="text-amber-300 font-semibold text-[9px]">
-              TSR 30 KM/H PRE-WARNING • KM 170-184 • CLASH AVOIDED
-            </span>
-          </div>
-        </div>
-      );
-    }
-    if (activeScenario === "CP_SAT") {
-      return (
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border text-cyan-400 border-cyan-400/90 bg-cyan-950/95">
-          <TrainIcon className="w-3.5 h-3.5 flex-shrink-0 text-cyan-400" />
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
-            <span className="text-cyan-300 font-semibold text-[9px]">
-              CP-SAT OPTIMAL GAP ASSIGNED • 120 KM/H • ON-TIME (+0m)
-            </span>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t2.status, t2.delay_minutes)}`}>
-        <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
-        <div className="flex flex-col text-left">
-          <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
-          <span className="font-semibold text-[9px]">
-            {t2.speed_kmph} KM/H • {t2.delay_minutes === 0 ? "ON-TIME" : `+${t2.delay_minutes}M DELAY`} • NEAR {t2.current_station}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <group>
-      {/* ─── Live Train 1: Lead UP Fast Line (Z = -3.2) ─────────────────── */}
+      {/* ─── Live Train 1: UP Fast Line (Z = -3.2) ───────────────────────── */}
       <group ref={train1Ref} position={[12, 0.32, -3.2]}>
         <BulletTrainModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <BulletCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
@@ -779,19 +1024,23 @@ function LiveTrainFleet({
         <pointLight color="#38bdf8" intensity={4.5} distance={8} position={[3.5, 0.6, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${getStatusBadgeClass(t1.status, t1.delay_minutes)}`}>
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${
+            hudState.t1Mode === "KAVACH_STOP"
+              ? "text-red-400 border-red-400/90 bg-red-950/95 animate-pulse"
+              : hudState.t1Mode === "KAVACH_CAUTION"
+              ? "text-amber-400 border-amber-400/90 bg-amber-950/95 animate-pulse"
+              : getStatusBadgeClass(t1.status, t1.delay_minutes)
+          }`}>
             <TrainIcon className="w-3.5 h-3.5 flex-shrink-0" />
             <div className="flex flex-col text-left">
               <span className="font-bold text-white tracking-wide">{t1.train_number} {t1.train_name}</span>
-              <span className="font-semibold text-[9px]">
-                {t1.speed_kmph} KM/H • {t1.delay_minutes === 0 ? "ON-TIME" : `+${t1.delay_minutes}M DELAY`} • KM {Number(t1.current_km || 88).toFixed(1)}
-              </span>
+              <span className="font-semibold text-[9px]">{hudState.t1Text}</span>
             </div>
           </div>
         </Html>
       </group>
 
-      {/* ─── Live Train 2: Trailing UP Fast Line (Z = -3.2) / Rerouted to Loop (Z = 3.2) ─── */}
+      {/* ─── Live Train 2: UP Fast Line (Z = -3.2) / Rerouted to Loop (Z = 3.2) ─── */}
       <group ref={train2Ref} position={[-12, 0.32, -3.2]}>
         <PassengerLocoModel position={[1.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
         <PassengerCarriageModel position={[0, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
@@ -805,7 +1054,31 @@ function LiveTrainFleet({
         />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          {renderTrain2Badge()}
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${
+            hudState.t2Mode === "REROUTED"
+              ? "text-emerald-400 border-emerald-400/90 bg-emerald-950/95 animate-pulse"
+              : hudState.t2Mode === "KAVACH_STOP"
+              ? "text-red-400 border-red-400/90 bg-red-950/95 animate-pulse"
+              : hudState.t2Mode === "KAVACH_CAUTION"
+              ? "text-amber-400 border-amber-400/90 bg-amber-950/95 animate-pulse"
+              : hudState.t2Mode === "CP_SAT"
+              ? "text-cyan-400 border-cyan-400/90 bg-cyan-950/95"
+              : hudState.t2Mode === "TSR"
+              ? "text-amber-400 border-amber-400/90 bg-amber-950/95 animate-pulse"
+              : getStatusBadgeClass(t2.status, t2.delay_minutes)
+          }`}>
+            {hudState.t2Mode === "REROUTED" ? (
+              <Navigation className="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
+            ) : hudState.t2Mode === "KAVACH_STOP" ? (
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-red-400" />
+            ) : (
+              <TrainIcon className="w-3.5 h-3.5 flex-shrink-0 text-cyan-400" />
+            )}
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-white tracking-wide">{t2.train_number} {t2.train_name}</span>
+              <span className="font-semibold text-[9px]">{hudState.t2Text}</span>
+            </div>
+          </div>
         </Html>
       </group>
 
@@ -820,13 +1093,19 @@ function LiveTrainFleet({
         <pointLight color="#fbbf24" intensity={3.5} distance={6} position={[-4.8, 0.6, 0]} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[50, 0]}>
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-zinc-900/90 border border-zinc-600 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
-            <TrainIcon className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px] border ${
+            hudState.t3Holding
+              ? "text-red-400 border-red-500/90 bg-red-950/95 animate-pulse"
+              : "bg-zinc-900/90 border-zinc-600 text-amber-400"
+          }`}>
+            {hudState.t3Holding ? (
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+            ) : (
+              <TrainIcon className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            )}
             <div className="flex flex-col text-left">
               <span className="font-bold text-white tracking-wide">{t3.train_number} {t3.train_name}</span>
-              <span className="text-zinc-400 font-semibold text-[9px]">
-                {t3.speed_kmph} KM/H • DN MAINLINE • {t3.status}
-              </span>
+              <span className="text-zinc-300 font-semibold text-[9px]">{hudState.t3Text}</span>
             </div>
           </div>
         </Html>
@@ -836,7 +1115,13 @@ function LiveTrainFleet({
 }
 
 // ─── Real PostgreSQL In-Situ Maintenance Possession Blocks ───────────────────
-function InSituMaintenanceBlocks({ blocks }: { blocks: MaintenanceBlock[] }) {
+function InSituMaintenanceBlocks({
+  blocks,
+  rerouteActive = false,
+}: {
+  blocks: MaintenanceBlock[];
+  rerouteActive?: boolean;
+}) {
   const beaconRef = useRef<THREE.PointLight>(null);
 
   useFrame(({ clock }) => {
@@ -911,39 +1196,50 @@ function InSituMaintenanceBlocks({ blocks }: { blocks: MaintenanceBlock[] }) {
 
       {/* ─── Block 2: Track Possession on Loop Siding (Z = +3.2) ───────────── */}
       <group position={[18.0, 0.45, 3.2]}>
-        <mesh>
-          <boxGeometry args={[8, 1.4, 1.6]} />
-          <meshPhysicalMaterial
-            color="#10b981"
-            transmission={0.8}
-            roughness={0.2}
-            transparent
-            opacity={0.35}
-            emissive="#10b981"
-            emissiveIntensity={0.4}
-          />
-        </mesh>
+        {!rerouteActive ? (
+          <>
+            <mesh>
+              <boxGeometry args={[8, 1.4, 1.6]} />
+              <meshPhysicalMaterial
+                color="#10b981"
+                transmission={0.8}
+                roughness={0.2}
+                transparent
+                opacity={0.35}
+                emissive="#10b981"
+                emissiveIntensity={0.4}
+              />
+            </mesh>
 
-        <lineSegments>
-          <edgesGeometry args={[new THREE.BoxGeometry(8, 1.4, 1.6)]} />
-          <lineBasicMaterial color="#34d399" linewidth={2} />
-        </lineSegments>
+            <lineSegments>
+              <edgesGeometry args={[new THREE.BoxGeometry(8, 1.4, 1.6)]} />
+              <lineBasicMaterial color="#34d399" linewidth={2} />
+            </lineSegments>
 
-        <pointLight color="#10b981" intensity={2.5} distance={6} position={[0, 1.4, 0]} />
+            <pointLight color="#10b981" intensity={2.5} distance={6} position={[0, 1.4, 0]} />
 
-        <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-950/95 border border-emerald-500 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
-            <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span className="font-bold text-emerald-200 uppercase tracking-wide">
-                BLOCK {b2.block_code} [{b2.primary_department}]
-              </span>
-              <span className="text-emerald-400 font-semibold text-[9px]">
-                KM {b2.start_km} TO {b2.end_km} • {b2.status} • OVERTAKE CLEAR
-              </span>
+            <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-950/95 border border-emerald-500 rounded shadow-2xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[10px]">
+                <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <div className="flex flex-col text-left">
+                  <span className="font-bold text-emerald-200 uppercase tracking-wide">
+                    BLOCK {b2.block_code} [{b2.primary_department}]
+                  </span>
+                  <span className="text-emerald-400 font-semibold text-[9px]">
+                    KM {b2.start_km} TO {b2.end_km} • {b2.status} • SIDING CLEAR
+                  </span>
+                </div>
+              </div>
+            </Html>
+          </>
+        ) : (
+          <Html position={[0, 2.4, 0]} center distanceFactor={14} zIndexRange={[100, 0]}>
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-950/90 border border-emerald-400/80 rounded shadow-xl backdrop-blur-md whitespace-nowrap select-none font-mono text-[9px] text-emerald-300">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>LOOP SIDING UNLOCKED // BYPASS CORRIDOR ACTIVE</span>
             </div>
-          </div>
-        </Html>
+          </Html>
+        )}
       </group>
     </group>
   );
@@ -999,6 +1295,9 @@ export const ThreeDStringChart: React.FC<ThreeDStringChartProps> = ({
   onTriggerSpeedSim: _onTriggerSpeedSim,
 }) => {
   const [resetKey, setResetKey] = useState(0);
+  const train1Ref = useRef<THREE.Group>(null);
+  const train2Ref = useRef<THREE.Group>(null);
+  const train3Ref = useRef<THREE.Group>(null);
   const [liveTrains, setLiveTrains] = useState<TrainTelemetry[]>([]);
   const [liveBlocks, setLiveBlocks] = useState<MaintenanceBlock[]>([]);
   const [liveWeather, setLiveWeather] = useState<WeatherReport | null>(null);
@@ -1196,6 +1495,9 @@ export const ThreeDStringChart: React.FC<ThreeDStringChartProps> = ({
             <RailwayCorridorTracks
               rerouteActive={rerouteActive}
               speedRestrictionActive={speedRestrictionActive}
+              train1Ref={train1Ref}
+              train2Ref={train2Ref}
+              train3Ref={train3Ref}
             />
 
             {/* 4. Live Train Models Driven by Real Backend Telemetry */}
@@ -1204,10 +1506,13 @@ export const ThreeDStringChart: React.FC<ThreeDStringChartProps> = ({
               rerouteActive={rerouteActive}
               speedRestrictionActive={speedRestrictionActive}
               activeScenario={activeScenario}
+              train1Ref={train1Ref}
+              train2Ref={train2Ref}
+              train3Ref={train3Ref}
             />
 
             {/* 5. PostgreSQL In-Situ Possession Blocks */}
-            <InSituMaintenanceBlocks blocks={liveBlocks} />
+            <InSituMaintenanceBlocks blocks={liveBlocks} rerouteActive={rerouteActive} />
           </Suspense>
         </Canvas>
 

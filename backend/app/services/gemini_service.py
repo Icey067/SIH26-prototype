@@ -58,7 +58,7 @@ class GeminiService:
 
         candidate_models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
 
-        async with httpx.AsyncClient(timeout=35.0) as client:
+        async with httpx.AsyncClient(timeout=6.0) as client:
             for api_key, key_idx in ordered_keys:
                 masked_key = KeyRotator.mask_key(api_key)
                 key_label = f"[{key_idx + 1}/{rotator.count}] ({masked_key})"
@@ -101,17 +101,17 @@ class GeminiService:
                                     parsed["ai_model_used"] = f"Samanvay-NLP-Core (Engine #{key_idx + 1})"
                                     logger.info(f"NLP parse succeeded using key {key_label} with engine {model_name}")
                                     return parsed
-                        elif response.status_code in (429, 403, 401):
+                        elif response.status_code in (400, 401, 403, 404, 429):
                             logger.warning(
-                                f"Gemini API key {key_label} hit HTTP {response.status_code} (Rate-limit/Quota). "
-                                f"Rotating to next round-robin key."
+                                f"Gemini API key {key_label} hit HTTP {response.status_code}. "
+                                f"Rotating to next round-robin key or heuristic fallback."
                             )
-                            # Break model loop to rotate to the next API key
+                            # Break model loop to rotate to the next API key or fallback
                             break
                         else:
                             logger.warning(f"Gemini API returned {response.status_code} for key {key_label} model {model_name}: {response.text[:100]}")
                     except Exception as e:
-                        logger.error(f"Error querying Gemini model {model_name} with key {key_label}: {e}")
+                        logger.warning(f"Gemini call error for model {model_name} with key {key_label}: {e}")
 
         # If all API keys and models fail, fallback to heuristic
         logger.warning("All Gemini API keys/models exhausted. Using heuristic defect fallback parser.")

@@ -8,9 +8,9 @@ export default function SignInForm() {
   const navigate = useNavigate();
   const { login, presetOfficers } = useAuth();
 
-  const [email, setEmail] = useState("controller.pryj@ncr.railnet.gov.in");
-  const [password, setPassword] = useState("••••••••••••");
-  const [selectedPresetId, setSelectedPresetId] = useState("OFFICER-01");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState("");
   const [agreedGsr, setAgreedGsr] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [authStage, setAuthStage] = useState<string | null>(null);
@@ -29,10 +29,21 @@ export default function SignInForm() {
     }
   };
 
+  const handlePasswordFocus = () => {
+    if (password === "••••••••••••") {
+      setPassword("");
+      setSelectedPresetId("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setErrorMsg("Please provide your Railnet Email ID or Employee ID.");
+      setErrorMsg("Please provide your Email ID.");
+      return;
+    }
+    if (!password) {
+      setErrorMsg("Please enter your password.");
       return;
     }
     if (!agreedGsr) {
@@ -42,13 +53,13 @@ export default function SignInForm() {
 
     setErrorMsg(null);
     setIsLoading(true);
-    setAuthStage("Authorizing G&SR Token...");
+    setAuthStage("Connecting to Firebase Authentication...");
 
     try {
       await login(email, password, selectedPresetId);
       navigate("/dashboard");
     } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to authenticate with CRIS server.");
+      setErrorMsg(err?.message || "Failed to authenticate with Firebase.");
       setIsLoading(false);
       setAuthStage(null);
     }
@@ -170,7 +181,11 @@ export default function SignInForm() {
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onFocus={handlePasswordFocus}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setSelectedPresetId("");
+              }}
               animate={
                 isFlashing
                   ? {
