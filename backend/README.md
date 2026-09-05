@@ -116,6 +116,10 @@ uvicorn app.main:app --reload --port 8000
 
 ### Step 4: Run Automated Tests
 ```bash
+# Run endpoint verification suite
+python test_api_endpoints.py
+
+# Run full pytest suite
 pytest -v
 ```
 
