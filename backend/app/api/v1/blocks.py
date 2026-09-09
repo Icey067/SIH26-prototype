@@ -2,7 +2,7 @@ import uuid
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.core.database import get_db
 from app.models.block import MaintenanceBlock, BlockDefectAssociation, BlockStatus
 from app.models.defect import Defect, DefectStatus
@@ -99,7 +99,9 @@ def list_blocks(
     if line:
         query = query.filter(MaintenanceBlock.line == line)
 
-    blocks = query.order_by(MaintenanceBlock.time_window_start.asc()).all()
+    blocks = query.options(
+        selectinload(MaintenanceBlock.defects).selectinload(BlockDefectAssociation.defect)
+    ).order_by(MaintenanceBlock.time_window_start.asc()).all()
     return [map_block_out(b) for b in blocks]
 
 @router.post("", response_model=MaintenanceBlockOut, status_code=201)
@@ -509,4 +511,3 @@ def run_block_optimization_with_metrics(
         "blocks": out_blocks,
         "metrics": metrics
     }
-

@@ -2,10 +2,10 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.block import MaintenanceBlock, BlockStatus
+from app.models.block import MaintenanceBlock, BlockDefectAssociation, BlockStatus
 from app.models.defect import Defect, DefectStatus, LegacySystem, Department, Severity, SyncStatus
 from app.schemas.sync import (
     DownstreamSyncResponse,
@@ -39,6 +39,8 @@ def downstream_sync(db: Session = Depends(get_db)):
             BlockStatus.IN_PROGRESS,
             BlockStatus.UPCOMING
         ])
+    ).options(
+        selectinload(MaintenanceBlock.defects).selectinload(BlockDefectAssociation.defect)
     ).order_by(MaintenanceBlock.time_window_start.asc()).all()
 
     # Check for any overdue leases in active blocks and update them
