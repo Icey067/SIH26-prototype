@@ -63,13 +63,14 @@ tests = [
     ("Sync Downstream", "/api/v1/sync/downstream", "GET", None),
 ]
 
-all_passed = True
-for name, url, method, body in tests:
-    ok = test_endpoint(name, url, method, body)
-    if not ok:
-        all_passed = False
+if __name__ == "__main__":
+    all_passed = True
+    for name, url, method, body in tests:
+        ok = test_endpoint(name, url, method, body)
+        if not ok:
+            all_passed = False
 
-if not all_passed:
-    sys.exit(1)
-print("\n>>> ALL BACKEND API ENDPOINTS VERIFIED AND FUNCTIONAL <<<")
-sys.exit(0)
+    if not all_passed:
+        sys.exit(1)
+    print("\n>>> ALL BACKEND API ENDPOINTS VERIFIED AND FUNCTIONAL <<<")
+    sys.exit(0)

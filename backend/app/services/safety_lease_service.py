@@ -8,9 +8,33 @@ import hmac
 import hashlib
 import json
 import base64
+import secrets
+import string
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from app.core.config import settings
+
+
+# ---------------------------------------------------------------------------
+# G&SR Block State Machine: 5-Stage Protocol
+# ---------------------------------------------------------------------------
+PROTOCOL_STAGES = {
+    0: "DEMAND_LOGGED",
+    1: "CAUTION_ORDER_ISSUED",
+    2: "SM_CONCURRED",
+    3: "OHE_ISOLATED",
+    4: "WORK_IN_PROGRESS",
+    5: "TRACK_CLEARED",
+}
+
+PROTOCOL_STAGE_DESCRIPTIONS = {
+    0: "Block demand registered by SSE/JE in the system",
+    1: "Section Controller issues Caution Order, stops traffic on block section",
+    2: "Station Master concurs with independent Private Number, route isolated",
+    3: "OHE power block obtained from TPC/TSS (for TDMS work), 25kV isolated",
+    4: "Field crew on track, work in progress under safety lease",
+    5: "Track reconnected, S&T circuits tested, line clear certificate issued",
+}
 
 
 class SafetyLeaseService:
@@ -133,6 +157,47 @@ class SafetyLeaseService:
         if not lease_expires_at:
             return False
         return datetime.utcnow() > lease_expires_at
+
+    # -----------------------------------------------------------------------
+    # Private Number Generation Helpers (G&SR compliant formats)
+    # -----------------------------------------------------------------------
+    @staticmethod
+    def _random_digits(n: int = 4) -> str:
+        return "".join(secrets.choice(string.digits) for _ in range(n))
+
+    @classmethod
+    def generate_controller_pn(cls) -> str:
+        """
+        Generate a Section Controller Private Number.
+        Format: PN-CTRL-XXXX (G&SR Dual-Key Handshake Part 1)
+        """
+        return f"PN-CTRL-{cls._random_digits(4)}"
+
+    @classmethod
+    def generate_station_master_pn(cls, station_id: str) -> str:
+        """
+        Generate a Station Master Private Number.
+        Format: PN-SM-{STATION}-YYYY (G&SR Dual-Key Handshake Part 2)
+        """
+        return f"PN-SM-{station_id.upper()}-{cls._random_digits(4)}"
+
+    @classmethod
+    def revoke_lease(cls, block_id: str, station_id: str = "CTRL") -> Dict[str, Any]:
+        """
+        Issue a PNC (Private Number Cancellation) token to revoke a block's
+        safety lease. Used for block clearance or emergency revocation.
+
+        Returns:
+            Dict with PNC token and revocation metadata
+        """
+        pnc_token = f"PNC-{station_id.upper()}-{cls._random_digits(4)}"
+        return {
+            "block_id": block_id,
+            "pnc_token": pnc_token,
+            "revoked_at": datetime.utcnow().isoformat(),
+            "status": "REVOKED",
+            "action": "Lease invalidated. Field crew must vacate track immediately.",
+        }
 
 
 safety_lease_service = SafetyLeaseService()

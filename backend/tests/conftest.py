@@ -13,3 +13,13 @@ def setup_test_database():
 def client():
     with TestClient(app) as test_client:
         yield test_client
+
+@pytest.fixture
+def db_session():
+    """Direct database session for tests that need DB access outside HTTP client."""
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+

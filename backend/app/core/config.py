@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # External Live APIs
     GEMINI_API_KEY: Union[str, None] = None
     GEMINI_API_KEYS: Union[str, None] = None
-    GEMINI_MODEL: str = "gemini-1.5-pro"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     RAPIDAPI_KEY: Union[str, None] = None
     RAPIDAPI_KEYS: Union[str, None] = None
     RAPIDAPI_HOST: str = "indian-railways-info.p.rapidapi.com"

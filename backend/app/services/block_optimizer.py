@@ -362,8 +362,16 @@ class BlockOptimizer:
             bundle_score = sum(int(d.criticality_score) for d in bundle_defects)
             departments = {d.department for d in bundle_defects}
 
-            # Synergy Bonus: +60 points for 2 depts, +140 points for 3 depts
-            synergy_bonus = len(departments) * 50 if len(departments) > 1 else 0
+            # G&SR Synergy Bonus (spec-mandated values):
+            # +60 points for 2-department joint bundle
+            # +140 points for 3-department mega-shadow block
+            num_depts = len(departments)
+            if num_depts >= 3:
+                synergy_bonus = 140
+            elif num_depts == 2:
+                synergy_bonus = 60
+            else:
+                synergy_bonus = 0
             total_weight = bundle_score + synergy_bonus
 
             for g in range(num_gaps):
@@ -373,13 +381,23 @@ class BlockOptimizer:
             model.Maximize(sum(objective_terms))
 
         solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = 5.0
+        solver.parameters.max_time_in_seconds = 1.0
+        solver.parameters.num_workers = 8
         status = solver.Solve(model)
 
         planned_blocks = []
         total_unbundled_minutes = 0
         total_bundled_minutes = 0
         assigned_bundle_indices = set()
+
+        if status == cp_model.INFEASIBLE:
+            # Log diagnostic info for infeasible models
+            import logging
+            logging.getLogger(__name__).warning(
+                f"CP-SAT INFEASIBLE: {num_bundles} bundles, {num_gaps} gaps. "
+                f"Solver wall time: {solver.wall_time:.3f}s. "
+                f"Falling through to Phase 2 emergency regulation."
+            )
 
         if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
             for b in range(num_bundles):
@@ -499,7 +517,7 @@ class BlockOptimizer:
         train_number: str,
         scheduled_entry_minute: int,
         delay_minutes: int,
-        headway_buffer_mins: float = 12.0
+        headway_buffer_mins: float = 15.0
     ) -> Dict[str, Any]:
         """
         G&SR Safety Check: Evaluates if a live train delay causes schedule compression

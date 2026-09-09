@@ -59,12 +59,10 @@ async def live_websocket_endpoint(websocket: WebSocket, db: Session = Depends(ge
         }
         await websocket.send_json(initial_payload)
 
-        # Keep connection open and listen for client commands / heartbeats
-        while True:
-            data = await websocket.receive_text()
-            if data == "ping":
-                await websocket.send_json({"event": "pong", "time": datetime.datetime.utcnow().isoformat()})
-            elif data == "poll_telemetry":
+        # Periodic background telemetry broadcast task
+        async def broadcast_loop():
+            while True:
+                await asyncio.sleep(3.5)
                 snapshot = {
                     "event": "TELEMETRY_UPDATE",
                     "timestamp": datetime.datetime.utcnow().isoformat(),
@@ -72,6 +70,27 @@ async def live_websocket_endpoint(websocket: WebSocket, db: Session = Depends(ge
                     "conflicts": await LiveConflictMonitor.evaluate_conflicts(db)
                 }
                 await websocket.send_json(snapshot)
+
+        # Command listener task for client heartbeats and manual polling
+        async def listen_loop():
+            while True:
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_json({"event": "pong", "time": datetime.datetime.utcnow().isoformat()})
+                elif data == "poll_telemetry":
+                    snapshot = {
+                        "event": "TELEMETRY_UPDATE",
+                        "timestamp": datetime.datetime.utcnow().isoformat(),
+                        "trains": await LiveTrainService.get_corridor_train_feed(),
+                        "conflicts": await LiveConflictMonitor.evaluate_conflicts(db)
+                    }
+                    await websocket.send_json(snapshot)
+
+        broadcast_task = asyncio.create_task(broadcast_loop())
+        listen_task = asyncio.create_task(listen_loop())
+        done, pending = await asyncio.wait([broadcast_task, listen_task], return_when=asyncio.FIRST_COMPLETED)
+        for task in pending:
+            task.cancel()
 
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)

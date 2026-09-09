@@ -24,7 +24,7 @@ import time
 class LiveTrainService:
     _cached_feed: Optional[List[Dict[str, Any]]] = None
     _last_fetch_time: float = 0.0
-    _cache_ttl: float = 12.0 # 12 second live freshness TTL
+    _cache_ttl: float = 3.0 # 3 second live freshness TTL for continuous live simulation
 
     @classmethod
     async def fetch_live_status(cls, train_number: str) -> Optional[Dict[str, Any]]:
@@ -65,7 +65,7 @@ class LiveTrainService:
             return cls._cached_feed
 
         now = datetime.datetime.now()
-        current_minute = now.hour * 60 + now.minute
+        current_minute = now.hour * 60 + now.minute + (now.second / 60.0)
 
         # Fetch all live train statuses concurrently in parallel
         tasks = [
@@ -105,7 +105,7 @@ class LiveTrainService:
                 # Trains are spaced across the day. Calculate dynamic progress:
                 cycle_offset = (current_minute + (i * 95)) % 1440
                 progress_fraction = (cycle_offset % 180) / 180.0
-                current_km = round(15.0 + progress_fraction * (205.0 - 15.0), 1)
+                current_km = round(15.0 + progress_fraction * (205.0 - 15.0), 2)
 
                 # Generate realistic operational delay (e.g. 0 to 25 mins)
                 delay_mins = (i * 7 + (current_minute // 15)) % 28

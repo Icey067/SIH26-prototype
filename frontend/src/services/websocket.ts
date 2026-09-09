@@ -12,6 +12,7 @@ class RailwayWebSocketService {
   private subscribers: TelemetryCallback[] = [];
   private reconnectTimeout: any = null;
   private pingInterval: any = null;
+  private pollInterval: any = null;
   private url = "ws://localhost:8000/api/v1/live/ws";
   private isConnected = false;
 
@@ -33,6 +34,12 @@ class RailwayWebSocketService {
             this.socket.send("ping");
           }
         }, 15000);
+
+        // Periodic telemetry poll
+        if (this.pollInterval) clearInterval(this.pollInterval);
+        this.pollInterval = setInterval(() => {
+          this.requestTelemetryUpdate();
+        }, 4000);
       };
 
       this.socket.onmessage = (event) => {
@@ -54,6 +61,7 @@ class RailwayWebSocketService {
         this.isConnected = false;
         console.warn("🔴 Railway WebSocket disconnected. Retrying in 4 seconds...");
         if (this.pingInterval) clearInterval(this.pingInterval);
+        if (this.pollInterval) clearInterval(this.pollInterval);
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = setTimeout(() => this.connect(), 4000);
       };

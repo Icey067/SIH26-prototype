@@ -2,6 +2,22 @@ from app.schemas.common import DepartmentEnum, SeverityEnum, LegacySystemEnum, B
 from app.schemas.defect import DefectCreate, DefectUpdate, DefectOut, DefectBase
 from app.schemas.block import MaintenanceBlockCreate, MaintenanceBlockUpdate, MaintenanceBlockOut, BlockApprovalRequest, BlockExecutionUpdate
 from app.schemas.timetable import TrainScheduleCreate, TrainScheduleOut, TimetableGap
+from app.schemas.conflict import (
+    KavachBrakingResponse,
+    EconomicImpact,
+    SpatialTemporalConflictDTO,
+    BundlingOpportunity,
+    ConflictDetectionSummary,
+    ConflictDetectionReport,
+)
+from app.schemas.live import (
+    TrainPositionDTO,
+    RailHazards,
+    WeatherAlertDTO,
+    KavachResponseDTO,
+    LiveConflictAlert,
+    TelemetrySnapshot,
+)
 
 __all__ = [
     "DepartmentEnum",
@@ -22,4 +38,16 @@ __all__ = [
     "TrainScheduleCreate",
     "TrainScheduleOut",
     "TimetableGap",
+    "KavachBrakingResponse",
+    "EconomicImpact",
+    "SpatialTemporalConflictDTO",
+    "BundlingOpportunity",
+    "ConflictDetectionSummary",
+    "ConflictDetectionReport",
+    "TrainPositionDTO",
+    "RailHazards",
+    "WeatherAlertDTO",
+    "KavachResponseDTO",
+    "LiveConflictAlert",
+    "TelemetrySnapshot",
 ]

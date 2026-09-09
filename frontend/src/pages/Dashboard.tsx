@@ -30,6 +30,7 @@ import {
   Printer,
   FileText,
   X,
+  RotateCcw,
 } from "lucide-react";
 
 import { ThreeDStringChart } from "@/components/dashboard/3DStringChart";
@@ -117,15 +118,21 @@ export default function Dashboard() {
       setCurrentTime(new Date().toLocaleTimeString("en-IN"));
     }, 1000);
 
-    // WebSocket subscription
+    // WebSocket subscription & periodic live telemetry sync
     wsService.connect();
     const unsubscribe = wsService.subscribe((payload) => {
       if (payload.trains) setTrains(payload.trains);
       if (payload.conflicts) setConflicts(payload.conflicts);
+      if (payload.weather) setWeather(payload.weather);
     });
+
+    const telemetryPollTimer = setInterval(() => {
+      wsService.requestTelemetryUpdate();
+    }, 4000);
 
     return () => {
       clearInterval(clockTimer);
+      clearInterval(telemetryPollTimer);
       unsubscribe();
     };
   }, []);
@@ -196,6 +203,18 @@ export default function Dashboard() {
     setTimeout(() => {
       setSolvedStatus(null);
     }, 6000);
+  };
+
+  // 4. Handle Reset Scenario (restore pending conflicts for live demo / presentations)
+  const handleResetScenario = () => {
+    setActiveScenario("NONE");
+    setConflictZoneResolved(false);
+    setSolvedStatus(null);
+    showToast(
+      "CONFLICT SIMULATION RESET",
+      "Tactical conflicts #C-04 and #C-05 restored to pending state for live demonstration.",
+      "info"
+    );
   };
 
   // Handle Granting a Block and generating authentic Private Number
@@ -298,10 +317,11 @@ export default function Dashboard() {
     const deptLabel =
       deptCode === "TMS" ? "ENGG (CIVIL)" : deptCode === "SMMS" ? "S&T (SIGNALS)" : "TRD (ELECTRICAL)";
 
-    const reqDur = `${Math.floor(b.duration_minutes / 60)}h ${b.duration_minutes % 60}m`;
-    const predDurMins = b.predicted_duration_mins || b.duration_minutes;
+    const reqMins = Math.round(b.duration_minutes || 0);
+    const reqDur = `${Math.floor(reqMins / 60)}h ${reqMins % 60}m`;
+    const predDurMins = Math.round(b.predicted_duration_mins || b.duration_minutes || 0);
     const mlPred = `${Math.floor(predDurMins / 60)}h ${predDurMins % 60}m`;
-    const diff = predDurMins - b.duration_minutes;
+    const diff = Math.round(predDurMins - reqMins);
     const overrun = diff > 0 ? `+${diff}m Overrun` : diff < 0 ? `${diff}m Early` : "On Track";
     const riskLevel: "HIGH" | "MED" | "LOW" =
       b.status === "BURSTED" || diff >= 30 ? "HIGH" : diff >= 10 ? "MED" : "LOW";
@@ -826,9 +846,23 @@ export default function Dashboard() {
                     Tactical Conflict Resolution
                   </h3>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-surface-container-highest font-mono text-[10px] text-primary uppercase font-bold border border-primary/20">
-                  {conflictZoneResolved ? "0 PENDING" : "2 PENDING"}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {(conflictZoneResolved || activeScenario !== "NONE") && (
+                    <button
+                      onClick={handleResetScenario}
+                      className="px-2 py-0.5 rounded bg-surface-container-highest hover:bg-surface-bright text-primary font-mono text-[10px] font-bold border border-primary/30 flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Reset Conflict Scenario for Live Demo"
+                    >
+                      <RotateCcw className="h-3 w-3 text-primary" />
+                      <span>RESET DEMO</span>
+                    </button>
+                  )}
+                  <span className={`px-2 py-0.5 rounded font-mono text-[10px] uppercase font-bold border ${
+                    conflictZoneResolved ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/50" : "bg-surface-container-highest text-primary border-primary/20"
+                  }`}>
+                    {conflictZoneResolved ? "0 PENDING" : "2 PENDING"}
+                  </span>
+                </div>
               </div>
 
               {/* Conflict Card 1 (CRITICAL / RESOLVED) */}
@@ -1011,6 +1045,16 @@ export default function Dashboard() {
                   <span>{activeScenario === "SPEED_RESTRICTION" ? "✓ TSR 30 km/h Active" : "Simulate Pre-Warning Speed"}</span>
                 </button>
               </div>
+
+              {(conflictZoneResolved || activeScenario !== "NONE") && (
+                <button
+                  onClick={handleResetScenario}
+                  className="w-full mt-1 py-1.5 px-3 rounded bg-surface-container-high hover:bg-surface-bright text-primary font-mono text-[10px] font-bold uppercase transition-all border border-primary/30 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <RotateCcw className="h-3 w-3 text-primary" />
+                  <span>Reset Conflict Scenario (Re-trigger for Demo)</span>
+                </button>
+              )}
             </div>
           </div>
 

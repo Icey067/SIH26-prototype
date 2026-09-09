@@ -15,7 +15,7 @@ def test_network_graph_topology():
     """Verify directed multigraph stations, edges, and trajectories."""
     topo = corridor_network.get_topology_dict()
     assert topo["total_length_km"] == 440.0
-    assert len(topo["nodes"]) == 11
+    assert len(topo["nodes"]) == 12
     assert topo["nodes"][0]["id"] == "GZB"
     assert topo["nodes"][-1]["id"] == "CNB"
 

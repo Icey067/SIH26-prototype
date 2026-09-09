@@ -5,7 +5,7 @@ using RandomForestRegressor trained on RDSO permanent way maintenance standards.
 """
 
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -187,13 +187,29 @@ class DurationRiskPredictor:
             risk_level = "LOW"
             recommendation = "Low Risk: Work is well within empirical completion envelope."
 
+        # Generate condition-aware empirical advisory per RDSO maintenance baselines
+        advisory_parts = []
+        if weather_condition.upper() == "EXTREME_HEAT":
+            advisory_parts.append("Add 25 min buffer for thermal destressing; rail temp may exceed 55°C.")
+        if weather_condition.upper() == "FOG":
+            advisory_parts.append("Fog visibility protocol active; allow extra 15 min for signal verification.")
+        if weather_condition.upper() == "HEAVY_RAIN":
+            advisory_parts.append("Heavy rain: ballast saturation may slow BCM/CSM; add 30 min contingency.")
+        if machinery_deployed.upper() == "BCM" and activity_type.upper() == "DEEP_SCREENING":
+            advisory_parts.append("BCM deep screening typically overruns by 15-20%; pre-stage backup tamper.")
+        if delta > 20:
+            advisory_parts.append(f"Predicted duration exceeds request by {delta:.0f} min; consider extending block window.")
+        empirical_advisory = " ".join(advisory_parts) if advisory_parts else recommendation
+
         return {
             "requested_duration_mins": round(float(requested_duration_mins), 1),
             "predicted_duration_mins": predicted_duration,
             "duration_discrepancy_mins": round(predicted_duration - requested_duration_mins, 1),
             "overrun_risk_score": overrun_prob,
+            "burst_risk_probability": overrun_prob,  # Alias per spec
             "risk_level": risk_level,
             "recommendation": recommendation,
+            "empirical_advisory": empirical_advisory,
         }
 
 

@@ -15,6 +15,7 @@ STATION_NODES = [
     {"id": "ALJN", "name": "Aligarh Jn", "km": 126.0, "type": "MAJOR_JUNCTION", "platforms": 7},
     {"id": "HRS", "name": "Hathras Jn", "km": 156.0, "type": "JUNCTION", "platforms": 3},
     {"id": "TDL", "name": "Tundla Jn", "km": 204.0, "type": "DIVISIONAL_JUNCTION", "platforms": 5},
+    {"id": "FZD", "name": "Firozabad", "km": 222.0, "type": "STATION_CROSSOVER", "platforms": 3},
     {"id": "SKB", "name": "Shikohabad Jn", "km": 240.0, "type": "JUNCTION", "platforms": 4},
     {"id": "ETW", "name": "Etawah Jn", "km": 296.0, "type": "MAJOR_JUNCTION", "platforms": 5},
     {"id": "PHD", "name": "Phaphund", "km": 352.0, "type": "BLOCK_STATION", "platforms": 4},
@@ -172,6 +173,24 @@ class CorridorNetwork:
                     status="CLEAR",
                 )
 
+        # 3. Explicit Turnout #34-B Diamond Interlocking at Tundla Outer (G&SR Crossover)
+        self.graph.add_edge(
+            "TDL",
+            "TDL",
+            key="TURNOUT_34B_TDL_OUTER",
+            line_type="CROSSOVER",
+            direction="BOTH",
+            start_km=203.5,
+            end_km=204.5,
+            length_km=1.0,
+            max_speed_kmh=15,
+            electrified=True,
+            tss_sector="TSS-TDL",
+            status="CLEAR",
+            turnout_id="TURNOUT-34B",
+            interlocking_type="DIAMOND",
+        )
+
     @staticmethod
     def get_elementary_section_for_km(km: float, line: str = "UP") -> Optional[ElementarySection]:
         """Returns the physical OHE elementary section enclosing this kilometer marker."""
@@ -251,7 +270,7 @@ class CorridorNetwork:
             "total_length_km": 440.0,
             "nodes": sorted(nodes, key=lambda x: x["km"]),
             "edges": edges,
-            "elementary_sections": [es.dict() for es in ELEMENTARY_SECTIONS],
+            "elementary_sections": [es.model_dump() for es in ELEMENTARY_SECTIONS],
             "machine_depots": MACHINE_DEPOTS,
         }
 
